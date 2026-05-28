@@ -1,0 +1,14 @@
+version: '3'
+services:
+  ai-docs:
+    container_name: ai-docs
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    volumes:
+      - ../:/opt/project/mkdocs
+    working_dir: /opt/project/mkdocs
+    tty: true
+    command: mkdocs serve 
+    ports:
+      - "8000:8000"

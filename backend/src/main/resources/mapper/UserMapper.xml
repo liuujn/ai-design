@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.app.user.mapper.UserMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.app.user.model.entity.User">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="display_name" property="displayName"/>
+        <result column="email" property="email"/>
+        <result column="phone" property="phone"/>
+        <result column="password_hash" property="passwordHash"/>
+        <result column="status" property="status"/>
+        <result column="mfa_enabled" property="mfaEnabled"/>
+        <result column="mfa_secret" property="mfaSecret"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="is_deleted" property="isDeleted"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, username, display_name, email, phone, password_hash, status,
+        mfa_enabled, mfa_secret, created_at, created_by, updated_at, updated_by, is_deleted
+    </sql>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT * FROM (
+            SELECT T.*, ROWNUM RN FROM (
+                SELECT id, username, display_name, email, phone, status, mfa_enabled, created_at
+                FROM users
+                <where>
+                    is_deleted = 0
+                    <if test="keyword != null and keyword != ''">
+                        AND (username LIKE '%' || #{keyword} || '%'
+                             OR display_name LIKE '%' || #{keyword} || '%')
+                    </if>
+                    <if test="status != null and status != ''">
+                        AND status = #{status}
+                    </if>
+                </where>
+                ORDER BY created_at DESC
+            ) T WHERE ROWNUM &lt;= #{offset} + #{size}
+        ) WHERE RN > #{offset}
+    </select>
+
+    <select id="count" resultType="Long">
+        SELECT COUNT(*)
+        FROM users
+        <where>
+            is_deleted = 0
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE '%' || #{keyword} || '%'
+                     OR display_name LIKE '%' || #{keyword} || '%')
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/>
+        FROM users
+        WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectByUsername" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/>
+        FROM users
+        WHERE username = #{username} AND is_deleted = 0
+    </select>
+
+    <select id="selectByEmail" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/>
+        FROM users
+        WHERE email = #{email} AND is_deleted = 0
+    </select>
+
+    <select id="selectByEmailExcludeId" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/>
+        FROM users
+        WHERE email = #{email} AND id &lt;&gt; #{excludeId} AND is_deleted = 0
+    </select>
+
+    <select id="selectUpdatedAtById" resultType="java.time.LocalDateTime">
+        SELECT updated_at FROM users WHERE id = #{id}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO users (id, username, display_name, email, phone, password_hash, status,
+                           mfa_enabled, mfa_secret, created_at, created_by, updated_at, updated_by, is_deleted)
+        VALUES (#{id}, #{username}, #{displayName}, #{email}, #{phone, jdbcType=VARCHAR}, #{passwordHash},
+                NVL(#{status}, 'active'), #{mfaEnabled, jdbcType=INTEGER},
+                #{mfaSecret, jdbcType=VARCHAR},
+                SYSTIMESTAMP, #{createdBy}, SYSTIMESTAMP, #{createdBy}, 0)
+    </insert>
+
+    <update id="updateByIdAndUpdatedAt">
+        UPDATE users
+        <set>
+            <if test="displayName != null">display_name = #{displayName},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="mfaEnabled != null">mfa_enabled = #{mfaEnabled, jdbcType=INTEGER},</if>
+            <if test="passwordHash != null">password_hash = #{passwordHash},</if>
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{updatedBy}
+        </set>
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="logicDeleteByIdAndUpdatedAt">
+        UPDATE users
+        SET is_deleted = 1, updated_at = SYSTIMESTAMP, updated_by = #{updatedBy}
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="updateStatusByIdAndUpdatedAt">
+        UPDATE users
+        SET status = #{status}, updated_at = SYSTIMESTAMP, updated_by = #{updatedBy}
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+</mapper>

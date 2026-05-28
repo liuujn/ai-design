@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>系统首页</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    var _vueOk = false, _axiosOk = false, _queue = []
+    function _tryCDN(name, urls, i) {
+      if (i >= urls.length) return
+      var s = document.createElement('script')
+      s.src = urls[i]
+      s.onload = function() { if (name === 'vue') _vueOk = true; else _axiosOk = true; while (_queue.length && _vueOk && _axiosOk) _queue.shift()() }
+      s.onerror = function() { _tryCDN(name, urls, i+1) }
+      document.head.appendChild(s)
+    }
+    _tryCDN('vue', ['https://cdnjs.cloudflare.com/ajax/libs/vue/3.5.13/vue.global.prod.js','https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js','https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js'], 0)
+    _tryCDN('axios', ['https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.9/axios.min.js','https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js','https://unpkg.com/axios@1.7.9/dist/axios.min.js'], 0)
+    setTimeout(function() {
+      if (!_vueOk || !_axiosOk) {
+        var el = document.getElementById('app')
+        if (el) el.innerHTML = '<div style="padding:40px;text-align:center;font-size:14px;"><p style="color:red;">依赖加载失败</p><p style="color:#999;margin-top:8px;">请检查网络连接后 <a href="#" onclick="location.reload()" style="color:#3b82f6;">刷新页面</a></p></div>'
+      }
+    }, 15000)
+  </script>
+  <style>
+    body { margin: 0; }
+    .sidebar-transition { transition: width 0.25s ease, padding 0.25s ease; }
+    .content-transition { transition: margin-left 0.25s ease; }
+    .menu-item { transition: all 0.15s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.25s ease; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div id="app"><home-page></home-page></div>
+
+  <script id="tpl" type="text/x-template">
+    <div class="h-screen flex overflow-hidden bg-gray-50">
+      <aside class="sidebar-transition bg-gray-900 text-gray-300 flex flex-col flex-shrink-0 overflow-hidden" :style="{ width: collapsed ? '60px' : '220px' }">
+        <div class="flex items-center h-14 px-4 border-b border-gray-700/50 flex-shrink-0" :class="collapsed ? 'justify-center' : 'justify-between'">
+          <div v-if="!collapsed" class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+            <span class="text-sm font-semibold text-white tracking-wide">管理系统</span>
+          </div>
+          <div v-else class="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+        </div>
+
+        <nav class="flex-1 py-3 overflow-y-auto">
+          <div v-for="(item, idx) in menuItems" :key="idx">
+            <div v-if="item.divider" class="px-4 py-1.5">
+              <div v-if="!collapsed" class="text-[10px] uppercase tracking-widest text-gray-500 font-medium">{{ item.label }}</div>
+            </div>
+            <div v-else @click="switchMenu(idx)" class="menu-item flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg cursor-pointer select-none text-sm" :class="activeMenu === idx ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'">
+              <div class="w-5 h-5 flex items-center justify-center flex-shrink-0" v-html="item.icon"></div>
+              <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
+            </div>
+          </div>
+        </nav>
+
+        <div class="border-t border-gray-700/50 p-3 flex-shrink-0">
+          <div @click="collapsed = !collapsed" class="menu-item flex items-center justify-center gap-2 px-3 py-2 rounded-lg cursor-pointer select-none text-xs text-gray-500 hover:text-gray-300 hover:bg-gray-800">
+            <svg class="w-4 h-4 transition-transform duration-200" :class="collapsed ? '' : 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+            <span v-if="!collapsed">收起侧栏</span>
+          </div>
+        </div>
+      </aside>
+
+      <div class="flex-1 flex flex-col min-w-0">
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0 shadow-sm">
+          <div class="flex items-center gap-3">
+            <h1 class="text-sm font-medium text-gray-700">{{ currentItem?.pageTitle || '' }}</h1>
+          </div>
+          <div class="flex items-center gap-4 text-sm">
+            <div class="flex items-center gap-2 text-gray-500 tabular-nums">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>{{ now }}</span>
+            </div>
+            <div class="w-px h-5 bg-gray-200"></div>
+            <div class="flex items-center gap-2 text-gray-600">
+              <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-semibold">{{ userInitial }}</div>
+              <span class="font-medium">{{ userName }}</span>
+            </div>
+            <button @click="doLogout" class="flex items-center gap-1.5 px-3 py-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 text-xs font-medium">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+              <span v-if="!collapsed">退出</span>
+            </button>
+          </div>
+        </header>
+
+        <main class="flex-1 overflow-hidden bg-gray-50">
+          <div v-if="activeMenu === 0" class="p-6 h-full overflow-y-auto fade-in">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+              <div class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-2 border-t-blue-500 p-5">
+                <div class="flex items-center justify-between mb-2"><span class="text-xs font-medium text-gray-500 uppercase tracking-wider">用户总数</span><div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg></div></div>
+                <p class="text-2xl font-bold text-gray-800">{{ stats.userCount }}</p>
+              </div>
+              <div class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-2 border-t-emerald-500 p-5">
+                <div class="flex items-center justify-between mb-2"><span class="text-xs font-medium text-gray-500 uppercase tracking-wider">订单总数</span><div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div></div>
+                <p class="text-2xl font-bold text-gray-800">{{ stats.orderCount }}</p>
+              </div>
+              <div class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-2 border-t-amber-500 p-5">
+                <div class="flex items-center justify-between mb-2"><span class="text-xs font-medium text-gray-500 uppercase tracking-wider">活跃用户</span><div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div></div>
+                <p class="text-2xl font-bold text-gray-800">{{ stats.activeCount }}</p>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 class="text-sm font-semibold text-gray-800 mb-3">快捷入口</h3>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div @click="switchMenu(2)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50 cursor-pointer transition-all duration-200">
+                  <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg></div>
+                  <div><p class="text-sm font-medium text-gray-700">用户管理</p><p class="text-xs text-gray-400">管理系统用户</p></div>
+                </div>
+                <div @click="switchMenu(3)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-orange-200 hover:bg-orange-50 cursor-pointer transition-all duration-200">
+                  <div class="w-9 h-9 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+                  <div><p class="text-sm font-medium text-gray-700">地址管理</p><p class="text-xs text-gray-400">管理收货地址</p></div>
+                </div>
+                <div @click="switchMenu(4)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-purple-200 hover:bg-purple-50 cursor-pointer transition-all duration-200">
+                  <div class="w-9 h-9 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>
+                  <div><p class="text-sm font-medium text-gray-700">商品管理</p><p class="text-xs text-gray-400">管理商品信息</p></div>
+                </div>
+                <div @click="switchMenu(5)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50 cursor-pointer transition-all duration-200">
+                  <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div>
+                  <div><p class="text-sm font-medium text-gray-700">订单管理</p><p class="text-xs text-gray-400">查看管理订单</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <iframe v-else :src="currentItem?.pageSrc ? baseDir + currentItem.pageSrc : ''" class="w-full h-full border-none"></iframe>
+        </main>
+      </div>
+
+      <div v-if="sv" class="fixed top-4 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-gray-800 text-white text-sm rounded-lg shadow-lg z-50 fade-in">{{ sv }}</div>
+    </div>
+  </script>
+
+  <script>
+    ;(function boot(){
+      if (!_vueOk || !_axiosOk) { _queue.push(boot); return }
+      if (!localStorage.getItem('auth_token')) { window.location.href = '登录.html'; return }
+
+      const { ref, reactive, computed, onMounted, onUnmounted, createApp } = Vue
+
+      const menuItems = [
+        { label: '首页', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>', pageTitle: '系统首页' },
+        { divider: true, label: '业务管理' },
+        { label: '用户管理', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg>', pageTitle: '用户管理', pageSrc: '用户.html' },
+        { label: '地址管理', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>', pageTitle: '地址管理', pageSrc: '地址.html' },
+        { label: '商品管理', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>', pageTitle: '商品管理', pageSrc: '商品.html' },
+        { label: '订单管理', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>', pageTitle: '订单管理', pageSrc: '订单.html' }
+      ]
+
+      const baseDir = (function(){
+        var p = window.location.pathname
+        return p.substring(0, p.lastIndexOf('/') + 1)
+      })()
+
+      createApp({
+        components: {
+          'home-page': {
+            template: document.getElementById('tpl').innerHTML,
+            setup() {
+              const collapsed = ref(false)
+              const activeMenu = ref(0)
+              const userName = ref(localStorage.getItem('user_name') || '用户')
+              const now = ref('')
+              const sv = ref('')
+              let st = null
+              let timer = null
+
+              const userInitial = computed(() => {
+                var n = userName.value
+                return n && n.length > 0 ? n.charAt(0) : '?'
+              })
+
+              const currentItem = computed(() => menuItems[activeMenu.value])
+
+              const stats = reactive({ userCount: '-', orderCount: '-', activeCount: '-' })
+
+              function updateClock() {
+                var d = new Date()
+                var pad = n => String(n).padStart(2, '0')
+                now.value = d.getFullYear() + '/' + pad(d.getMonth()+1) + '/' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds())
+              }
+
+              function doLogout() {
+                localStorage.removeItem('auth_token')
+                localStorage.removeItem('user_name')
+                localStorage.removeItem('user_id')
+                window.location.href = '登录.html'
+              }
+
+              function switchMenu(idx) {
+                activeMenu.value = idx
+                if (idx === 0) fetchStats()
+              }
+
+              async function fetchStats() {
+                try {
+                  var api = axios.create({ baseURL: 'http://localhost:9090/api/v1', timeout: 10000, headers: { 'Content-Type': 'application/json' } })
+                  api.interceptors.request.use(cfg => { var t = localStorage.getItem('auth_token'); if (t) cfg.headers.Authorization = 'Bearer ' + t; return cfg })
+                  var r = await api.get('/users?size=1')
+                  stats.userCount = r.data.total ?? '-'
+                  if (r.data.total) stats.activeCount = '...'
+                } catch (e) { /* ignore */ }
+                try {
+                  var busy = await api.get('/users', { params: { status: 'active', size: 1 } })
+                  stats.activeCount = busy.data.total ?? '-'
+                } catch (e) { /* ignore */ }
+              }
+
+              onMounted(() => {
+                updateClock()
+                timer = setInterval(updateClock, 1000)
+                fetchStats()
+              })
+
+              onUnmounted(() => { if (timer) clearInterval(timer) })
+
+              return { collapsed, activeMenu, userName, now, sv, userInitial, currentItem, stats, menuItems, baseDir, doLogout, switchMenu }
+            }
+          }
+        }
+      }).mount('#app')
+    })()
+  </script>
+</body>
+</html>

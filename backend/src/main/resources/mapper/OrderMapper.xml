@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.app.order.mapper.OrderMapper">
+
+    <resultMap id="OrderResultMap" type="com.example.app.order.model.entity.Order">
+        <id column="id" property="id"/>
+        <result column="order_no" property="orderNo"/>
+        <result column="customer_name" property="customerName"/>
+        <result column="total_amount" property="totalAmount"/>
+        <result column="status" property="status"/>
+        <result column="remark" property="remark"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="is_deleted" property="isDeleted"/>
+    </resultMap>
+
+    <resultMap id="OrderItemResultMap" type="com.example.app.order.model.entity.OrderItem">
+        <id column="id" property="id"/>
+        <result column="order_id" property="orderId"/>
+        <result column="item_name" property="itemName"/>
+        <result column="quantity" property="quantity"/>
+        <result column="unit_price" property="unitPrice"/>
+        <result column="subtotal" property="subtotal"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="is_deleted" property="isDeleted"/>
+    </resultMap>
+
+    <sql id="OrderColumns">
+        id, order_no, customer_name, total_amount, status, remark,
+        created_at, created_by, updated_at, updated_by, is_deleted
+    </sql>
+
+    <sql id="OrderItemColumns">
+        id, order_id, item_name, quantity, unit_price, subtotal,
+        created_at, updated_at, is_deleted
+    </sql>
+
+    <select id="selectPage" resultMap="OrderResultMap">
+        SELECT * FROM (
+            SELECT T.*, ROWNUM RN FROM (
+                SELECT id, order_no, customer_name, total_amount, status, created_at, updated_at
+                FROM orders
+                <where>
+                    is_deleted = 0
+                    <if test="keyword != null and keyword != ''">
+                        AND (order_no LIKE '%' || #{keyword} || '%' OR customer_name LIKE '%' || #{keyword} || '%')
+                    </if>
+                    <if test="status != null and status != ''">AND status = #{status}</if>
+                </where>
+                ORDER BY created_at DESC
+            ) T WHERE ROWNUM &lt;= #{offset} + #{size}
+        ) WHERE RN > #{offset}
+    </select>
+
+    <select id="count" resultType="Long">
+        SELECT COUNT(*) FROM orders
+        <where>
+            is_deleted = 0
+            <if test="keyword != null and keyword != ''">
+                AND (order_no LIKE '%' || #{keyword} || '%' OR customer_name LIKE '%' || #{keyword} || '%')
+            </if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="selectById" resultMap="OrderResultMap">
+        SELECT <include refid="OrderColumns"/>
+        FROM orders WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectItemsByOrderId" resultMap="OrderItemResultMap">
+        SELECT <include refid="OrderItemColumns"/>
+        FROM order_items WHERE order_id = #{orderId} AND is_deleted = 0
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="selectUpdatedAtById" resultType="java.time.LocalDateTime">
+        SELECT updated_at FROM orders WHERE id = #{id}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO orders (id, order_no, customer_name, total_amount, status, remark,
+                            created_at, created_by, updated_at, updated_by, is_deleted)
+        VALUES (#{id}, #{orderNo}, #{customerName}, #{totalAmount}, #{status}, #{remark, jdbcType=VARCHAR},
+                SYSTIMESTAMP, #{createdBy}, SYSTIMESTAMP, #{createdBy}, 0)
+    </insert>
+
+    <insert id="insertItems">
+        INSERT INTO order_items (id, order_id, item_name, quantity, unit_price, subtotal,
+                                 created_at, updated_at, is_deleted)
+        <foreach collection="list" item="item" separator="UNION ALL">
+            SELECT #{item.id}, #{item.orderId}, #{item.itemName}, #{item.quantity},
+                   #{item.unitPrice}, #{item.subtotal}, SYSTIMESTAMP, SYSTIMESTAMP, 0 FROM DUAL
+        </foreach>
+    </insert>
+
+    <update id="updateByIdAndUpdatedAt">
+        UPDATE orders
+        <set>
+            <if test="customerName != null">customer_name = #{customerName},</if>
+            <if test="totalAmount != null">total_amount = #{totalAmount},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{updatedBy}
+        </set>
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="logicDeleteByIdAndUpdatedAt">
+        UPDATE orders
+        SET is_deleted = 1, updated_at = SYSTIMESTAMP, updated_by = #{updatedBy}
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="updateStatusByIdAndUpdatedAt">
+        UPDATE orders
+        SET status = #{status}, updated_at = SYSTIMESTAMP, updated_by = #{updatedBy}
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="deleteItemsByOrderId">
+        UPDATE order_items
+        SET is_deleted = 1
+        WHERE order_id = #{orderId}
+    </update>
+
+</mapper>

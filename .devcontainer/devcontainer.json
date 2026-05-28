@@ -1,0 +1,33 @@
+{
+  "name": "MkDocs",
+  "dockerComposeFile": "./docker-compose.yml",
+  "service": "ai-docs", // docker-compose.yml の service名と同じにしてください
+  "workspaceFolder": "/opt/project/mkdocs",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "yzhang.markdown-all-in-one",
+        "redhat.vscode-yaml",
+        "DavidAnson.vscode-markdownlint",
+        "hediet.vscode-drawio",
+        "MS-CEINTL.vscode-language-pack-ja",
+        "GitHub.copilot-chat",
+        "GitHub.copilot",
+        "bierner.markdown-mermaid",
+        "ms-vscode.copilot-mermaid-diagram",
+        "eamodio.gitlens"
+      ],
+      "settings": {
+        "markdownlint.config": {
+          "MD007": false,
+          "MD024": false,
+          "MD029": false,
+          "MD032": false,
+          "MD033": false,
+          "MD046": false
+        }
+      }
+    }
+  },
+  "forwardPorts": [8000, 8080]
+}

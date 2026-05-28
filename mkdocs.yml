@@ -1,0 +1,93 @@
+site_name: 'AI-DOCS'
+site_description: 'AI-DOCSのドキュメントサイトです。'
+copyright: Copyright GCSOFT Inc. All rights reserved.
+dev_addr: '0.0.0.0:8000'
+
+theme:
+  name: material
+  navigation_tabs: true
+  language: 'ja'
+  font:
+    text: Noto Sans JP
+    code: Roboto Mono
+  features:
+    - navigation.tabs 
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotate
+    - content.code.copy
+    - content.footnote.tooltips
+
+plugins:
+  - search
+  
+markdown_extensions:
+  - def_list
+  - attr_list
+  - md_in_html
+  - pymdownx.highlight:
+      noclasses: false
+      linenums: true
+      anchor_linenums: true
+  - pymdownx.superfences:
+        custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - footnotes
+  - toc:
+      toc_depth: 3
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - mdx_truly_sane_lists:
+      nested_indent: 2
+ 
+extra:
+  search:
+    language: 'jp'
+  generator: false
+
+extra_css:
+  - 'css/custom.css'
+
+nav:
+  - TOP: git.md
+  - 基本设计:
+    - 基本设计/Messages.md
+    - 项目入口: 基本设计/画面/主页.html
+    - 表定义:
+      - 基本设计/表定义/用户.md
+      - 基本设计/表定义/订单.md
+      - 基本设计/表定义/地址.md
+      - 基本设计/表定义/商品.md
+    - API设计:
+      - 基本设计/API设计书/用户管理_API设计.md
+      - 基本设计/API设计书/订单管理_API设计.md
+      - 基本设计/API设计书/地址管理_API设计.md
+      - 基本设计/API设计书/商品管理_API设计.md
+    - 画面设计:
+      - 基本设计/画面设计书/用户更新_画面设计.md
+      - 基本设计/画面设计书/订单管理_画面设计.md
+      - 基本设计/画面设计书/地址管理_画面设计.md
+      - 基本设计/画面设计书/商品管理_画面设计.md
+    - 后端代码:
+      - 用户管理: 基本设计/后端代码/user/index.md
+      - 用户登录: 基本设计/后端代码/auth/index.md
+      - 地址管理: 基本设计/后端代码/address/index.md
+      - 商品管理: 基本设计/后端代码/product/index.md
+      - 订单管理: 基本设计/后端代码/order/index.md
+    - "画面(HTML)":
+      - 登录画面: 基本设计/画面/登录.html
+      - 用户画面: 基本设计/画面/用户.html
+      - 地址画面: 基本设计/画面/地址.html
+      - 商品画面: 基本设计/画面/商品.html
+      - 订单画面: 基本设计/画面/订单.html

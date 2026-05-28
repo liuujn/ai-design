@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>商品管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    var _vueOk = false, _axiosOk = false, _queue = []
+    function _tryCDN(name, urls, i) {
+      if (i >= urls.length) return
+      var s = document.createElement('script')
+      s.src = urls[i]
+      s.onload = function() { if (name === 'vue') _vueOk = true; else _axiosOk = true; while (_queue.length && _vueOk && _axiosOk) _queue.shift()() }
+      s.onerror = function() { _tryCDN(name, urls, i+1) }
+      document.head.appendChild(s)
+    }
+    _tryCDN('vue', ['https://cdnjs.cloudflare.com/ajax/libs/vue/3.5.13/vue.global.prod.js','https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js','https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js'], 0)
+    _tryCDN('axios', ['https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.9/axios.min.js','https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js','https://unpkg.com/axios@1.7.9/dist/axios.min.js'], 0)
+    setTimeout(function() {
+      if (!_vueOk || !_axiosOk) {
+        var el = document.getElementById('app')
+        if (el) el.innerHTML = '<div style="padding:40px;text-align:center;font-size:14px;"><p style="color:red;">依赖加载失败</p><p style="color:#999;margin-top:8px;">请检查网络连接后 <a href="#" onclick="location.reload()" style="color:#3b82f6;">刷新页面</a></p></div>'
+      }
+    }, 15000)
+  </script>
+</head>
+<body>
+  <script id="tpl" type="text/x-template">
+    <div class="min-h-screen bg-gray-50 font-sans text-gray-700">
+      <template v-if="viewMode === 'list'">
+        <div class="max-w-7xl mx-auto p-6">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-2 border-t-purple-500 p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800 tracking-tight">商品管理</h2>
+              <button @click="doCreate" class="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors duration-200 shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                新建商品
+              </button>
+            </div>
+
+            <div class="border border-gray-200 rounded-lg overflow-hidden mb-4">
+              <div @click="showSearch = !showSearch" class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 cursor-pointer select-none hover:bg-gray-100 transition-colors duration-200 text-sm font-medium text-gray-600">
+                <svg class="w-3 h-3 transition-transform duration-200" :class="showSearch ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                搜索条件
+              </div>
+              <div v-show="showSearch" class="px-4 py-3 border-t border-gray-200">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div><label class="block text-xs text-gray-500 mb-1">关键词</label><input v-model="sf.keyword" placeholder="名称/描述" @keyup.enter="search" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200" /></div>
+                  <div><label class="block text-xs text-gray-500 mb-1">分类</label><input v-model="sf.category" placeholder="请输入" @keyup.enter="search" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200" /></div>
+                  <div><label class="block text-xs text-gray-500 mb-1">状态</label>
+                    <select v-model="sf.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 bg-white">
+                      <option value="">全部</option>
+                      <option value="active">上架</option>
+                      <option value="inactive">下架</option>
+                    </select>
+                  </div>
+                  <div class="flex items-end gap-2">
+                    <button @click="clear" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">清除</button>
+                    <button @click="search" class="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors duration-200 shadow-sm">搜索</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="loading" class="text-center py-12"><div class="inline-block w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div></div>
+
+            <div v-if="!loading" class="overflow-x-auto rounded-lg border border-gray-200">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                    <th class="px-4 py-3 text-center w-12">#</th>
+                    <th class="px-4 py-3 text-left">商品名称</th>
+                    <th class="px-4 py-3 text-right">价格</th>
+                    <th class="px-4 py-3 text-right">库存</th>
+                    <th class="px-4 py-3 text-left">分类</th>
+                    <th class="px-4 py-3 text-center">状态</th>
+                    <th class="px-4 py-3 text-left">创建时间</th>
+                    <th class="px-4 py-3 text-center w-44">操作</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="(row, i) in list" :key="row.id" class="hover:bg-purple-50 cursor-pointer transition-colors duration-200">
+                    <td class="px-4 py-3 text-center text-gray-400 tabular-nums">{{ (pg.page - 1) * pg.size + i + 1 }}</td>
+                    <td class="px-4 py-3"><span class="text-purple-600 hover:text-purple-800 font-medium cursor-pointer" @click="doDetail(row)">{{ row.name }}</span></td>
+                    <td class="px-4 py-3 text-right tabular-nums font-medium">{{ row.price ? '￥' + Number(row.price).toFixed(2) : '-' }}</td>
+                    <td class="px-4 py-3 text-right tabular-nums" :class="row.stock != null && row.stock <= 5 ? 'text-red-500 font-medium' : ''">{{ row.stock != null ? row.stock : '-' }}</td>
+                    <td class="px-4 py-3"><span v-if="row.category" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">{{ row.category }}</span><span v-else class="text-gray-300">-</span></td>
+                    <td class="px-4 py-3 text-center">
+                      <span :class="row.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">{{ row.status === 'active' ? '上架' : '下架' }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-500 tabular-nums">{{ row.createdAt }}</td>
+                    <td class="px-4 py-3 text-center">
+                      <button @click.stop="doDetail(row)" class="text-purple-600 hover:text-purple-800 text-xs font-medium transition-colors duration-200">编辑</button>
+                      <button @click.stop="doToggleStatus(row)" class="text-amber-600 hover:text-amber-800 text-xs font-medium ml-3 transition-colors duration-200">{{ row.status === 'active' ? '下架' : '上架' }}</button>
+                      <button @click.stop="doDelete(row)" class="text-red-500 hover:text-red-700 text-xs font-medium ml-3 transition-colors duration-200">删除</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div v-if="list.length === 0 && !loading" class="text-center py-12 text-gray-400 text-sm">未找到符合条件的数据。</div>
+            </div>
+
+            <div v-if="total > 0" class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+              <div class="text-sm text-gray-500">共 <span class="font-medium text-gray-700">{{ total }}</span> 条</div>
+              <div class="flex items-center gap-2 text-sm">
+                <select v-model="pg.size" @change="search" class="px-2 py-1.5 border border-gray-300 rounded-lg text-sm outline-none bg-white">
+                  <option :value="10">10条/页</option>
+                  <option :value="20">20条/页</option>
+                  <option :value="50">50条/页</option>
+                </select>
+                <button :disabled="pg.page <= 1" @click="pg.page--;search()" :class="pg.page <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'" class="px-3 py-1.5 border border-gray-300 rounded-lg transition-colors duration-200 font-medium">上一页</button>
+                <span class="px-2 text-gray-600 font-medium">{{ pg.page }} / {{ totalPages }}</span>
+                <button :disabled="pg.page >= totalPages" @click="pg.page++;search()" :class="pg.page >= totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'" class="px-3 py-1.5 border border-gray-300 rounded-lg transition-colors duration-200 font-medium">下一页</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <template v-else>
+        <div class="max-w-3xl mx-auto p-6">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-2 border-t-purple-500 p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800 tracking-tight">{{ editMode === 'create' ? '新建商品' : '商品详情' }}</h2>
+              <div class="flex gap-2">
+                <button @click="doBack" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">返回</button>
+                <button v-if="editMode !== 'view'" @click="doSave" class="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors duration-200 shadow-sm">保存</button>
+                <button v-if="editMode === 'view'" @click="switchEdit" class="px-4 py-2 border border-purple-300 text-purple-600 text-sm rounded-lg hover:bg-purple-50 transition-colors duration-200">编辑</button>
+                <button v-if="editMode !== 'create'" @click="doCancel" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">取消</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+              <div><span class="text-gray-400 text-xs">商品ID</span><p class="font-medium mt-0.5">{{ f.id || '-' }}</p></div>
+              <div><span class="text-gray-400 text-xs">商品状态</span>
+                <select v-model="f.status" :disabled="!editable" class="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 bg-white disabled:bg-gray-50">
+                  <option value="active">上架</option>
+                  <option value="inactive">下架</option>
+                </select>
+              </div>
+              <div class="col-span-2"><span class="text-gray-400 text-xs"><span class="text-red-500">*</span> 商品名称</span>
+                <input v-model="f.name" placeholder="请输入商品名称" :disabled="!editable" class="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-400" />
+              </div>
+              <div class="col-span-2"><span class="text-gray-400 text-xs">商品描述</span>
+                <textarea v-model="f.description" placeholder="请输入商品描述" rows="3" :disabled="!editable" class="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-400 resize-none"></textarea>
+              </div>
+              <div><span class="text-gray-400 text-xs"><span class="text-red-500">*</span> 价格</span>
+                <div class="relative mt-0.5"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">￥</span><input v-model="f.price" type="number" step="0.01" min="0" placeholder="0.00" :disabled="!editable" class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-400" /></div>
+              </div>
+              <div><span class="text-gray-400 text-xs"><span class="text-red-500">*</span> 库存</span>
+                <input v-model.number="f.stock" type="number" min="0" placeholder="0" :disabled="!editable" class="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-400" />
+              </div>
+              <div><span class="text-gray-400 text-xs">分类</span>
+                <input v-model="f.category" placeholder="请输入商品分类" :disabled="!editable" class="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-400" />
+              </div>
+              <div><span class="text-gray-400 text-xs">图片URL</span>
+                <input v-model="f.imageUrl" placeholder="https://..." :disabled="!editable" class="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-400" />
+              </div>
+              <div><span class="text-gray-400 text-xs">创建时间</span><p class="mt-0.5 tabular-nums" v-text="f.createdAt || '-'"></p></div>
+              <div><span class="text-gray-400 text-xs">更新时间</span><p class="mt-0.5 tabular-nums" v-text="f.updatedAt || '-'"></p></div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <div v-if="cv" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="cCancel">
+        <div class="bg-white rounded-xl shadow-xl p-6 min-w-[360px]">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <h3 class="text-base font-semibold text-gray-800">确认操作</h3>
+          </div>
+          <p class="text-sm text-gray-600 mb-6 ml-11">{{ cv }}</p>
+          <div class="flex justify-end gap-2">
+            <button @click="cCancel" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">取消</button>
+            <button @click="cOk" class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-sm">确定</button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="sv" class="fixed bottom-4 right-4 px-5 py-2.5 bg-gray-800 text-white text-sm rounded-lg shadow-lg z-50 transition-all duration-300">{{ sv }}</div>
+    </div>
+  </script>
+
+  <div id="app"><product-page></product-page></div>
+  <script>
+    ;(function boot(){
+      if (!_vueOk || !_axiosOk) { _queue.push(boot); return }
+      if (!localStorage.getItem('auth_token')) { window.location.href = '登录.html'; return }
+
+      const { ref, reactive, computed, onMounted, createApp } = Vue
+      const api = axios.create({ baseURL: 'http://localhost:9090/api/v1', timeout: 10000, headers: { 'Content-Type': 'application/json' } })
+      api.interceptors.request.use(cfg => { var t = localStorage.getItem('auth_token'); if (t) cfg.headers.Authorization = 'Bearer ' + t; return cfg })
+      api.interceptors.response.use(function(r){return r}, function(e){ if (e.response && e.response.status === 401) { localStorage.removeItem('auth_token'); window.location.href = '登录.html' }; return Promise.reject(e) })
+
+      createApp({
+        components: {
+          'product-page': {
+            template: document.getElementById('tpl').innerHTML,
+            setup() {
+              const loading = ref(false)
+              const viewMode = ref('list')
+              const editMode = ref('view')
+              const editable = computed(() => editMode.value !== 'view')
+              const showSearch = ref(true)
+              const sf = reactive({ keyword: '', category: '', status: '' })
+              const pg = reactive({ page: 1, size: 20 })
+              const total = ref(0)
+              const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pg.size)))
+              const list = ref([])
+              const f = reactive({ id: '', name: '', description: '', price: '', stock: 0, category: '', imageUrl: '', status: 'active', createdAt: '', updatedAt: '' })
+              const sv = ref('')
+              let st = null
+              const toast = (msg) => { sv.value = msg; if (st) clearTimeout(st); st = setTimeout(() => sv.value = '', 3000) }
+              const cv = ref('')
+              let cr = null
+              const confirm = (msg) => new Promise(r => { cv.value = msg; cr = r })
+              const cOk = () => { cr?.(true); cv.value = ''; cr = null }
+              const cCancel = () => { cr?.(false); cv.value = ''; cr = null }
+
+              async function doFetch() {
+                loading.value = true
+                try {
+                  const res = await api.get('/products', { params: { keyword: sf.keyword || undefined, category: sf.category || undefined, status: sf.status || undefined, page: pg.page, size: pg.size } })
+                  var body = res.data
+                  total.value = body.total ?? 0
+                  list.value = body.content ?? []
+                } catch (e) {
+                  if (e.response?.status !== 401) toast('获取商品列表失败')
+                } finally { loading.value = false }
+              }
+
+              function search() { pg.page = 1; doFetch() }
+              function clear() { Object.assign(sf, { keyword: '', category: '', status: '' }); pg.page = 1 }
+
+              async function doDetail(row) {
+                editMode.value = 'view'; viewMode.value = 'edit'
+                try {
+                  var res = await api.get('/products/' + row.id)
+                  var d = res.data
+                  Object.assign(f, { id: d.id, name: d.name, description: d.description || '', price: d.price, stock: d.stock ?? 0, category: d.category || '', imageUrl: d.imageUrl || '', status: d.status || 'active', createdAt: d.createdAt, updatedAt: d.updatedAt })
+                } catch (e) { toast('获取商品详情失败'); doBack() }
+              }
+
+              function doCreate() {
+                editMode.value = 'create'; viewMode.value = 'edit'
+                Object.assign(f, { id: '', name: '', description: '', price: '', stock: 0, category: '', imageUrl: '', status: 'active', createdAt: '', updatedAt: '' })
+              }
+
+              function switchEdit() { editMode.value = 'edit' }
+
+              function validate() {
+                if (!f.name) return toast('商品名称不能为空')
+                if (!f.price || Number(f.price) <= 0) return toast('价格必须大于0')
+                if (f.stock === '' || f.stock == null || f.stock < 0) return toast('库存不能小于0')
+                return true
+              }
+
+              async function doSave() {
+                if (!validate()) return
+                try {
+                  var bodyReq = { name: f.name, description: f.description || undefined, price: Number(f.price), stock: f.stock, category: f.category || undefined, imageUrl: f.imageUrl || undefined, status: f.status }
+                  if (editMode.value === 'create') {
+                    await api.post('/products', bodyReq)
+                  } else {
+                    bodyReq.updatedAt = f.updatedAt
+                    await api.put('/products/' + f.id, bodyReq)
+                  }
+                  toast('保存成功'); doBack()
+                } catch (e) {
+                  if (e.response?.status === 401) return
+                  var msg = ''
+                  if (e.response?.data?.code === 'E9409') msg = '数据已被其他用户修改，请刷新后重试'
+                  else msg = e.response?.data?.message || '保存失败'
+                  toast(msg)
+                }
+              }
+
+              function doCancel() {
+                if (editMode.value === 'create') { doBack(); return }
+                confirm('放弃当前修改？').then(ok => { if (ok) { if (f.id) doDetail(list.value.find(i => i.id === f.id) || f); editMode.value = 'view' } })
+              }
+
+              function doBack() { viewMode.value = 'list'; editMode.value = 'view'; doFetch() }
+
+              async function doDelete(row) {
+                var ok = await confirm('确认删除该商品？')
+                if (!ok) return
+                try {
+                  var detailRes = await api.get('/products/' + row.id)
+                  await api.delete('/products/' + row.id, { data: { updatedAt: detailRes.data.updatedAt } })
+                  toast('删除成功'); doFetch()
+                } catch (e) {
+                  if (e.response?.status === 401) return
+                  if (e.response?.data?.code === 'E9409') toast('数据已被其他用户修改，请刷新后重试')
+                  else toast(e.response?.data?.message || '删除失败')
+                }
+              }
+
+              async function doToggleStatus(row) {
+                var targetStatus = row.status === 'active' ? 'inactive' : 'active'
+                var label = targetStatus === 'active' ? '上架' : '下架'
+                var ok = await confirm('确认' + label + '「' + row.name + '」？')
+                if (!ok) return
+                try {
+                  var detailRes = await api.get('/products/' + row.id)
+                  await api.patch('/products/' + row.id + '/status', { status: targetStatus, updatedAt: detailRes.data.updatedAt })
+                  toast(label + '成功'); doFetch()
+                } catch (e) {
+                  if (e.response?.status === 401) return
+                  if (e.response?.data?.code === 'E9409') toast('数据已被其他用户修改，请刷新后重试')
+                  else toast(e.response?.data?.message || '操作失败')
+                }
+              }
+
+              onMounted(() => doFetch())
+
+              return { loading, viewMode, editMode, editable, showSearch, sf, pg, total, totalPages, list, f, sv, cv, search, clear, doCreate, doDetail, switchEdit, doSave, doCancel, doBack, doDelete, doToggleStatus, cOk, cCancel }
+            }
+          }
+        }
+      }).mount('#app')
+    })()
+  </script>
+</body>
+</html>
