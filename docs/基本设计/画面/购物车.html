@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>购物车管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    var _vueOk = false, _axiosOk = false, _queue = []
+    function _tryCDN(name, urls, i) {
+      if (i >= urls.length) return
+      var s = document.createElement('script')
+      s.src = urls[i]
+      s.onload = function() { if (name === 'vue') _vueOk = true; else _axiosOk = true; while (_queue.length && _vueOk && _axiosOk) _queue.shift()() }
+      s.onerror = function() { _tryCDN(name, urls, i+1) }
+      document.head.appendChild(s)
+    }
+    _tryCDN('vue', ['https://cdnjs.cloudflare.com/ajax/libs/vue/3.5.13/vue.global.prod.js','https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js','https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js'], 0)
+    _tryCDN('axios', ['https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.9/axios.min.js','https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js','https://unpkg.com/axios@1.7.9/dist/axios.min.js'], 0)
+    setTimeout(function() {
+      if (!_vueOk || !_axiosOk) {
+        var el = document.getElementById('app')
+        if (el) el.innerHTML = '<div style="padding:40px;text-align:center;font-size:14px;"><p style="color:red;">依赖加载失败</p><p style="color:#999;margin-top:8px;">请检查网络连接后 <a href="#" onclick="location.reload()" style="color:#3b82f6;">刷新页面</a></p></div>'
+      }
+    }, 15000)
+  </script>
+</head>
+<body>
+  <script id="tpl" type="text/x-template">
+    <div class="min-h-screen bg-gray-50 font-sans text-gray-700">
+      <div class="max-w-5xl mx-auto p-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-2 border-t-cyan-500 p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-gray-800 tracking-tight">&#x1F6D2; 购物车</h2>
+            <div class="flex gap-2">
+              <button @click="clearCart" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">清空购物车</button>
+              <button @click="refresh" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">&#x21BB; 刷新</button>
+            </div>
+          </div>
+
+          <div v-if="!cart" class="text-center py-16">
+            <div class="text-6xl mb-4">&#x1F6D2;</div>
+            <p class="text-gray-400 text-lg mb-4">购物车是空的</p>
+            <p class="text-gray-300 text-sm">快去 <a href="商品.html" target="_parent" class="text-cyan-600 hover:text-cyan-800 font-medium">商品管理</a> 添加商品吧</p>
+          </div>
+
+          <div v-if="cart" class="space-y-4">
+            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-xs text-gray-400">收货地址</span>
+                  <div v-if="cart.address" class="mt-1">
+                    <p class="text-sm font-medium">{{ cart.address.recipientName }} {{ cart.address.recipientPhone }}</p>
+                    <p class="text-xs text-gray-500">{{ cart.address.province }}{{ cart.address.city }}{{ cart.address.district }} {{ cart.address.street }}</p>
+                  </div>
+                  <p v-else class="text-sm text-gray-400 mt-1">未选择配送地址</p>
+                </div>
+                <button @click="openAddressPicker" class="px-3 py-1.5 text-xs font-medium text-cyan-600 border border-cyan-300 rounded-lg hover:bg-cyan-50 transition-colors duration-200">{{ cart.address ? '修改' : '选择地址' }}</button>
+              </div>
+            </div>
+
+            <div v-if="loading" class="text-center py-8"><div class="inline-block w-6 h-6 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin"></div></div>
+
+            <div v-if="!loading && cart.items && cart.items.length > 0">
+              <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                      <th class="px-4 py-3 text-center w-12">#</th>
+                      <th class="px-4 py-3 text-left">商品</th>
+                      <th class="px-4 py-3 text-right">单价</th>
+                      <th class="px-4 py-3 text-center w-44">数量</th>
+                      <th class="px-4 py-3 text-right">小计</th>
+                      <th class="px-4 py-3 text-center w-20">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    <tr v-for="(item, i) in cart.items" :key="item.id" class="hover:bg-cyan-50 transition-colors duration-200">
+                      <td class="px-4 py-3 text-center text-gray-400 tabular-nums">{{ i + 1 }}</td>
+                      <td class="px-4 py-3">
+                        <span class="text-cyan-600 hover:text-cyan-800 font-medium cursor-pointer">{{ item.productName }}</span>
+                      </td>
+                      <td class="px-4 py-3 text-right tabular-nums font-medium">￥{{ item.unitPrice ? Number(item.unitPrice).toFixed(2) : '0.00' }}</td>
+                      <td class="px-4 py-3 text-center">
+                        <div class="inline-flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                          <button @click="decreaseQty(item)" :disabled="item.quantity <= 1" class="px-3 py-1 text-gray-500 hover:bg-gray-100 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed text-lg leading-none">-</button>
+                          <span class="px-4 py-1 text-sm font-medium tabular-nums border-x border-gray-200 bg-white min-w-[48px] text-center">{{ item.quantity }}</span>
+                          <button @click="increaseQty(item)" class="px-3 py-1 text-gray-500 hover:bg-gray-100 transition-colors duration-200 text-lg leading-none">+</button>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3 text-right tabular-nums font-medium text-cyan-700">￥{{ computeSubtotal(item) }}</td>
+                      <td class="px-4 py-3 text-center">
+                        <button @click="doDeleteItem(item)" class="text-red-500 hover:text-red-700 text-xs font-medium transition-colors duration-200">删除</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+                <div class="text-sm text-gray-500">共 <span class="font-medium text-gray-700">{{ cart.items.length }}</span> 件商品</div>
+                <div class="text-right">
+                  <span class="text-sm text-gray-500">合计：</span>
+                  <span class="text-2xl font-bold text-cyan-600 tabular-nums">￥{{ cart.totalAmount ? Number(cart.totalAmount).toFixed(2) : '0.00' }}</span>
+                </div>
+              </div>
+
+              <div class="flex justify-end mt-4 gap-3">
+                <button @click="goShopping" class="px-6 py-2.5 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">继续购物</button>
+                <button @click="doCheckout" :disabled="!cart.addressId" :class="cart.addressId ? 'bg-cyan-600 hover:bg-cyan-700 cursor-pointer shadow-sm' : 'bg-gray-300 cursor-not-allowed'" class="px-6 py-2.5 text-white text-sm font-medium rounded-lg transition-colors duration-200">结算下单</button>
+              </div>
+              <p v-if="!cart.addressId" class="text-right text-xs text-amber-500 mt-1">请先选择配送地址</p>
+            </div>
+
+            <div v-if="!loading && cart.items && cart.items.length === 0" class="text-center py-12 text-gray-400 text-sm">购物车是空的</div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="showAddressPicker" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showAddressPicker = false">
+        <div class="bg-white rounded-xl shadow-xl p-6 min-w-[480px] max-h-[80vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-gray-800">选择配送地址</h3>
+            <button @click="showAddressPicker = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          </div>
+          <div v-if="addressLoading" class="text-center py-8"><div class="inline-block w-5 h-5 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin"></div></div>
+          <div v-if="!addressLoading && addresses.length === 0" class="text-center py-8 text-gray-400 text-sm">暂无地址，请先在地址管理中添加</div>
+          <div v-if="!addressLoading" class="space-y-2">
+            <div v-for="addr in addresses" :key="addr.id" @click="pickAddress(addr)" :class="cart.addressId === addr.id ? 'border-cyan-500 bg-cyan-50' : 'border-gray-200 hover:border-cyan-300'" class="border rounded-lg p-3 cursor-pointer transition-all duration-200">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium">{{ addr.recipientName }} <span class="text-gray-400 font-normal">{{ addr.recipientPhone }}</span></p>
+                  <p class="text-xs text-gray-500 mt-0.5">{{ addr.province }}{{ addr.city }}{{ addr.district }} {{ addr.street }}</p>
+                </div>
+                <div v-if="cart.addressId === addr.id" class="text-cyan-600"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="cv" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="cCancel">
+        <div class="bg-white rounded-xl shadow-xl p-6 min-w-[360px]">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <h3 class="text-base font-semibold text-gray-800">确认操作</h3>
+          </div>
+          <p class="text-sm text-gray-600 mb-6 ml-11">{{ cv }}</p>
+          <div class="flex justify-end gap-2">
+            <button @click="cCancel" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">取消</button>
+            <button @click="cOk" class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-sm">确定</button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="sv" class="fixed bottom-4 right-4 px-5 py-2.5 bg-gray-800 text-white text-sm rounded-lg shadow-lg z-50 transition-all duration-300">{{ sv }}</div>
+    </div>
+  </script>
+
+  <div id="app"><cart-page></cart-page></div>
+  <script>
+    ;(function boot(){
+      if (!_vueOk || !_axiosOk) { _queue.push(boot); return }
+      if (!localStorage.getItem('auth_token')) { window.location.href = '登录.html'; return }
+
+      const { ref, reactive, computed, onMounted, createApp } = Vue
+      const api = axios.create({ baseURL: 'http://localhost:9090/api/v1', timeout: 10000, headers: { 'Content-Type': 'application/json' } })
+      api.interceptors.request.use(cfg => { var t = localStorage.getItem('auth_token'); if (t) cfg.headers.Authorization = 'Bearer ' + t; return cfg })
+      api.interceptors.response.use(function(r){return r}, function(e){ if (e.response && e.response.status === 401) { localStorage.removeItem('auth_token'); window.location.href = '登录.html' }; return Promise.reject(e) })
+
+      createApp({
+        components: {
+          'cart-page': {
+            template: document.getElementById('tpl').innerHTML,
+            setup() {
+              const loading = ref(false)
+              const cart = ref(null)
+              const showAddressPicker = ref(false)
+              const addresses = ref([])
+              const addressLoading = ref(false)
+              const sv = ref('')
+              const cv = ref('')
+              let cr = null, st = null
+
+              const toast = (msg) => { sv.value = msg; if (st) clearTimeout(st); st = setTimeout(() => sv.value = '', 3000) }
+              const confirm = (msg) => new Promise(r => { cv.value = msg; cr = r })
+              const cOk = () => { cr?.(true); cv.value = ''; cr = null }
+              const cCancel = () => { cr?.(false); cv.value = ''; cr = null }
+              const computeSubtotal = (item) => { return (Number(item.unitPrice || 0) * (item.quantity || 0)).toFixed(2) }
+
+              async function fetchCart() {
+                loading.value = true
+                try {
+                  var res = await api.get('/carts/my')
+                  cart.value = res.data
+                } catch (e) {
+                  if (e.response?.status !== 401) toast('获取购物车失败')
+                } finally { loading.value = false }
+              }
+
+              async function fetchAddresses() {
+                addressLoading.value = true
+                try {
+                  var res = await api.get('/addresses', { params: { page: 1, size: 50 } })
+                  addresses.value = res.data.content ?? []
+                } catch (e) { /* ignore */ }
+                finally { addressLoading.value = false }
+              }
+
+              async function refresh() { await fetchCart() }
+
+              async function updateQty(item, newQty) {
+                try {
+                  var updatedAt = item.updatedAt || item.createdAt
+                  if (!updatedAt) {
+                    var cartRes = await api.get('/carts/my')
+                    var found = cartRes.data.items?.find(i => i.id === item.id)
+                    updatedAt = found?.updatedAt || found?.createdAt
+                  }
+                  var res = await api.put('/carts/items/' + item.id, { quantity: newQty, updatedAt: updatedAt || item.createdAt })
+                  item.quantity = newQty
+                  item.updatedAt = res.data.updatedAt
+                  await fetchCart()
+                } catch (e) {
+                  if (e.response?.status === 401) return
+                  if (e.response?.data?.code === 'E9409') toast('数据已被其他用户修改，请刷新后重试')
+                  else toast(e.response?.data?.message || '更新数量失败')
+                  await fetchCart()
+                }
+              }
+
+              async function decreaseQty(item) {
+                if (item.quantity <= 1) return
+                await updateQty(item, item.quantity - 1)
+              }
+
+              async function increaseQty(item) {
+                await updateQty(item, item.quantity + 1)
+              }
+
+              async function doDeleteItem(item) {
+                var ok = await confirm('确认删除「' + item.productName + '」？')
+                if (!ok) return
+                try {
+                  var cartRes = await api.get('/carts/my')
+                  var found = cartRes.data.items?.find(i => i.id === item.id)
+                  await api.delete('/carts/items/' + item.id, { data: { updatedAt: found?.createdAt || item.createdAt } })
+                  toast('已删除')
+                  await fetchCart()
+                } catch (e) {
+                  if (e.response?.status === 401) return
+                  if (e.response?.data?.code === 'E9409') toast('数据已被其他用户修改，请刷新后重试')
+                  else toast(e.response?.data?.message || '删除失败')
+                }
+              }
+
+              async function pickAddress(addr) {
+                if (!cart.value?.id) {
+                  toast('请先添加商品')
+                  showAddressPicker.value = false
+                  return
+                }
+                try {
+                  var cartRes = await api.get('/carts/my')
+                  await api.put('/carts/address', { addressId: addr.id, updatedAt: cartRes.data.updatedAt || cartRes.data.createdAt })
+                  toast('已选择地址')
+                  showAddressPicker.value = false
+                  await fetchCart()
+                } catch (e) {
+                  if (e.response?.status === 401) return
+                  if (e.response?.data?.code === 'E9409') toast('数据已被其他用户修改，请刷新后重试')
+                  else toast(e.response?.data?.message || '选择地址失败')
+                }
+              }
+
+              async function doCheckout() {
+                if (!cart.value?.addressId) { toast('请先选择配送地址'); return }
+                var ok = await confirm('确认结算下单？')
+                if (!ok) return
+                try {
+                  var cartRes = await api.get('/carts/my')
+                  var res = await api.post('/carts/checkout', { updatedAt: cartRes.data.updatedAt || cartRes.data.createdAt })
+                  toast('下单成功！订单号：' + res.data.orderNo)
+                  cart.value = null
+                  await fetchCart()
+                } catch (e) {
+                  if (e.response?.status === 401) return
+                  if (e.response?.data?.code === 'E9409') toast('数据已被其他用户修改，请刷新后重试')
+                  else toast(e.response?.data?.message || '结算失败')
+                }
+              }
+
+              async function clearCart() {
+                if (!cart.value?.id) return
+                var ok = await confirm('确认清空购物车？')
+                if (!ok) return
+                try {
+                  var cartRes = await api.get('/carts/my')
+                  await api.delete('/carts/my', { data: { updatedAt: cartRes.data.updatedAt || cartRes.data.createdAt } })
+                  toast('购物车已清空')
+                  cart.value = null
+                  await fetchCart()
+                } catch (e) {
+                  if (e.response?.status === 401) return
+                  if (e.response?.data?.code === 'E9409') toast('数据已被其他用户修改，请刷新后重试')
+                  else toast(e.response?.data?.message || '清空失败')
+                }
+              }
+
+              function goShopping() {
+                window.parent.postMessage({ type: 'switchMenu', index: 5 }, '*')
+              }
+
+              function openAddressPicker() {
+                fetchAddresses()
+                showAddressPicker.value = true
+              }
+
+              onMounted(() => { fetchCart() })
+
+              return { loading, cart, showAddressPicker, addresses, addressLoading, sv, cv, refresh, computeSubtotal, decreaseQty, increaseQty, doDeleteItem, pickAddress, doCheckout, clearCart, goShopping, openAddressPicker, cOk, cCancel, fetchAddresses }
+            }
+          }
+        }
+      }).mount('#app')
+    })()
+  </script>
+</body>
+</html>

@@ -8,6 +8,7 @@
         <result column="description" property="description"/>
         <result column="price" property="price"/>
         <result column="stock" property="stock"/>
+        <result column="category_id" property="categoryId"/>
         <result column="category" property="category"/>
         <result column="image_url" property="imageUrl"/>
         <result column="status" property="status"/>
@@ -19,20 +20,21 @@
     </resultMap>
 
     <sql id="BaseColumns">
-        id, name, description, price, stock, category, image_url,
+        id, name, description, price, stock, category_id, category, image_url,
         status, created_at, created_by, updated_at, updated_by, is_deleted
     </sql>
 
     <select id="selectPage" resultMap="BaseResultMap">
         SELECT * FROM (
             SELECT T.*, ROWNUM RN FROM (
-                SELECT id, name, price, stock, category, status, created_at, updated_at
+                SELECT id, name, price, stock, category_id, category, status, created_at, updated_at
                 FROM products
                 <where>
                     is_deleted = 0
                     <if test="keyword != null and keyword != ''">
                         AND (name LIKE '%' || #{keyword} || '%' OR description LIKE '%' || #{keyword} || '%')
                     </if>
+                    <if test="categoryId != null and categoryId != ''">AND category_id = #{categoryId}</if>
                     <if test="category != null and category != ''">AND category = #{category}</if>
                     <if test="status != null and status != ''">AND status = #{status}</if>
                 </where>
@@ -48,6 +50,7 @@
             <if test="keyword != null and keyword != ''">
                 AND (name LIKE '%' || #{keyword} || '%' OR description LIKE '%' || #{keyword} || '%')
             </if>
+            <if test="categoryId != null and categoryId != ''">AND category_id = #{categoryId}</if>
             <if test="category != null and category != ''">AND category = #{category}</if>
             <if test="status != null and status != ''">AND status = #{status}</if>
         </where>
@@ -63,10 +66,10 @@
     </select>
 
     <insert id="insert">
-        INSERT INTO products (id, name, description, price, stock, category, image_url,
+        INSERT INTO products (id, name, description, price, stock, category_id, category, image_url,
                               status, created_at, created_by, updated_at, updated_by, is_deleted)
         VALUES (#{id}, #{name}, #{description, jdbcType=VARCHAR}, #{price}, #{stock},
-                #{category, jdbcType=VARCHAR}, #{imageUrl, jdbcType=VARCHAR},
+                #{categoryId, jdbcType=VARCHAR}, #{category, jdbcType=VARCHAR}, #{imageUrl, jdbcType=VARCHAR},
                 #{status}, SYSTIMESTAMP, #{createdBy}, SYSTIMESTAMP, #{createdBy}, 0)
     </insert>
 
@@ -77,6 +80,7 @@
             <if test="description != null">description = #{description},</if>
             <if test="price != null">price = #{price},</if>
             <if test="stock != null">stock = #{stock},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
             <if test="category != null">category = #{category},</if>
             <if test="imageUrl != null">image_url = #{imageUrl},</if>
             <if test="status != null">status = #{status},</if>

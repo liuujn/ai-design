@@ -9,6 +9,7 @@ public class ProductCreateVO {
     private String name;
     private BigDecimal price;
     private Integer stock;
+    private String categoryId;
     private String status;
     private String createdAt;
 }

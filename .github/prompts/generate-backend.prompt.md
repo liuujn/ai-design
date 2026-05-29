@@ -36,7 +36,7 @@ generate_backend
 - MyBatis（XML配置）
 - Maven
 
-#### 项目包结构
+#### 项目包结构（路径A：文档 / 路径B：运行项目）
 ```
 com/example/{module}/
 ├── controller/
@@ -46,7 +46,9 @@ com/example/{module}/
 │   └── impl/
 │       └── {Entity}ServiceImpl.java  # 业务实现
 ├── mapper/
-│   └── {Entity}Mapper.java           # MyBatis Mapper接口
+│   ├── {Entity}Mapper.java           # MyBatis Mapper接口
+│   └── resources/mapper/
+│       └── {Entity}Mapper.xml        # MyBatis XML映射（路径B在 backend/src/main/resources/mapper/）
 ├── model/
 │   ├── entity/
 │   │   ├── {Entity}.java             # 主表实体
@@ -56,24 +58,20 @@ com/example/{module}/
 │   │   │   ├── {Entity}ListQuery.java      # 列表查询参数
 │   │   │   ├── {Entity}CreateRequest.java  # 创建请求
 │   │   │   ├── {Entity}UpdateRequest.java  # 更新请求
-│   │   │   ├── {Entity}StatusRequest.java  # 状态变更请求
+│   │   │   ├── {Entity}StatusRequest.java  # 状态变更请求（无需则跳过）
 │   │   │   └── {Entity}DeleteRequest.java  # 删除请求
 │   │   └── response/
 │   │       ├── {Entity}ListVO.java         # 列表响应
 │   │       ├── {Entity}DetailVO.java       # 详情响应
 │   │       ├── {Entity}CreateVO.java       # 创建响应
 │   │       ├── {Entity}UpdateVO.java       # 更新响应
-│   │       └── PageResult.java             # 分页结果
+│   │       ├── {Entity}StatusVO.java       # 状态变更响应（无需则跳过）
+│   │       └── PageResult.java             # 分页结果（共享，仅首次生成）
 │   └── enums/
-│       └── {Entity}Status.java             # 状态枚举
-├── config/
-│   ├── WebMvcConfig.java           # WebMVC配置
-│   ├── MyBatisConfig.java          # MyBatis配置
-│   └── GlobalExceptionHandler.java # 全局异常处理
-└── resources/
-    └── mapper/
-        └── {Entity}Mapper.xml      # MyBatis XML映射
+│       └── {Entity}Status.java             # 状态枚举（无需则跳过）
 ```
+
+> 注意：`config/` 配置类和 `exception/` 异常类在 `com/example/app/common/` 下共享，**不要**在每个模块中重复生成。
 
 #### 代码生成规范
 
@@ -365,49 +363,83 @@ public class PageResult<T> {
 | DTO 请求 | `docs/基本设计/后端代码/{module}/model/dto/request/*.java` | `backend/src/main/java/com/example/app/{module}/model/dto/request/*.java` |
 | DTO 响应 | `docs/基本设计/后端代码/{module}/model/dto/response/*.java` | `backend/src/main/java/com/example/app/{module}/model/dto/response/*.java` |
 | 枚举 | `docs/基本设计/后端代码/{module}/model/enums/{Entity}Status.java` | `backend/src/main/java/com/example/app/{module}/model/enums/{Entity}Status.java` |
-| Mapper XML | `docs/基本设计/后端代码/{module}/resources/mapper/{Entity}Mapper.xml` | `backend/src/main/resources/mapper/{Entity}Mapper.xml` |
+| Mapper XML | `docs/基本设计/后端代码/{module}/mapper/resources/mapper/{Entity}Mapper.xml` | `backend/src/main/resources/mapper/{Entity}Mapper.xml` |
 
 #### 共享文件（仅当不存在时生成）
 以下文件在 `backend/src/main/java/com/example/app/common/` 中已存在，**不要覆盖**：
-- `config/GlobalExceptionHandler.java`
-- `config/MyBatisConfig.java`
-- `config/WebMvcConfig.java`
-- `exception/BusinessException.java`
-- `model/dto/response/PageResult.java`
+- `com/example/app/common/config/GlobalExceptionHandler.java`
+- `com/example/app/common/config/MyBatisConfig.java`
+- `com/example/app/common/config/WebMvcConfig.java`
+- `com/example/app/common/exception/BusinessException.java`
+- `com/example/app/common/model/dto/response/PageResult.java`
 
 这些文件首次生成时写入路径A（文档），路径B用已有版本。后续模块生成时路径A也**不要覆盖**，直接复用。
+
+#### 文档 .md 文件生成（路径A 特有）
+
+每个 Java 源文件必须在同目录下生成一个对应的 `.md` 文件（如 `OrderController.java` → `OrderController.md`），内容和格式如下：
+
+```
+# OrderController
+
+```java
+(完整的 Java 源码)
+```
+```
+
+Mapper XML 对应生成 `{Entity}MapperXML.md`（如 `OrderMapper.xml` → `OrderMapperXML.md`），格式同上但语言为 `xml`。
+
+最后创建/更新 `index.md`（参考 `docs/基本设计/后端代码/product/index.md` 的格式），包含：
+- 包结构树（ASCII 图形）
+- 每个文件的 Markdown 链接（`[文件名](相对路径)）
 
 #### 文件编码
 - 全部使用 UTF-8
 
-目录结构示例（路径A）：
+目录结构示例（路径A — 文档）：
 ```
 docs/基本设计/后端代码/order/
+├── index.md
 ├── controller/OrderController.java
+├── controller/OrderController.md
 ├── service/OrderService.java
+├── service/OrderService.md
 ├── service/impl/OrderServiceImpl.java
+├── service/impl/OrderServiceImpl.md
 ├── mapper/OrderMapper.java
+├── mapper/OrderMapper.md
+├── mapper/resources/mapper/OrderMapper.xml
+├── mapper/resources/mapper/OrderMapperXML.md
 ├── model/entity/Order.java
+├── model/entity/Order.md
 ├── model/entity/OrderItem.java
-├── model/dto/request/OrderListQuery.java
-├── model/dto/request/OrderCreateRequest.java
-├── model/dto/request/OrderUpdateRequest.java
-├── model/dto/request/OrderStatusRequest.java
-├── model/dto/request/OrderDeleteRequest.java
-├── model/dto/response/OrderListVO.java
-├── model/dto/response/OrderDetailVO.java
-├── model/dto/response/OrderCreateVO.java
-├── model/dto/response/OrderUpdateVO.java
-├── model/dto/response/OrderStatusVO.java
-├── model/dto/response/PageResult.java
+├── model/entity/OrderItem.md
 ├── model/enums/OrderStatus.java
-├── config/WebMvcConfig.java
-├── config/MyBatisConfig.java
-├── config/GlobalExceptionHandler.java
-└── resources/mapper/OrderMapper.xml
+├── model/enums/OrderStatus.md
+├── model/dto/request/OrderListQuery.java
+├── model/dto/request/OrderListQuery.md
+├── model/dto/request/OrderCreateRequest.java
+├── model/dto/request/OrderCreateRequest.md
+├── model/dto/request/OrderUpdateRequest.java
+├── model/dto/request/OrderUpdateRequest.md
+├── model/dto/request/OrderStatusRequest.java
+├── model/dto/request/OrderStatusRequest.md
+├── model/dto/request/OrderDeleteRequest.java
+├── model/dto/request/OrderDeleteRequest.md
+├── model/dto/response/OrderListVO.java
+├── model/dto/response/OrderListVO.md
+├── model/dto/response/OrderDetailVO.java
+├── model/dto/response/OrderDetailVO.md
+├── model/dto/response/OrderCreateVO.java
+├── model/dto/response/OrderCreateVO.md
+├── model/dto/response/OrderUpdateVO.java
+├── model/dto/response/OrderUpdateVO.md
+├── model/dto/response/OrderStatusVO.java
+├── model/dto/response/OrderStatusVO.md
+└── model/dto/response/PageResult.java
 ```
 
-目录结构示例（路径B）：
+目录结构示例（路径B — 运行项目）：
 ```
 backend/src/main/java/com/example/app/order/
 ├── controller/OrderController.java
@@ -416,6 +448,7 @@ backend/src/main/java/com/example/app/order/
 ├── mapper/OrderMapper.java
 ├── model/entity/Order.java
 ├── model/entity/OrderItem.java
+├── model/enums/OrderStatus.java
 ├── model/dto/request/OrderListQuery.java
 ├── model/dto/request/OrderCreateRequest.java
 ├── model/dto/request/OrderUpdateRequest.java
@@ -426,8 +459,8 @@ backend/src/main/java/com/example/app/order/
 ├── model/dto/response/OrderCreateVO.java
 ├── model/dto/response/OrderUpdateVO.java
 ├── model/dto/response/OrderStatusVO.java
-├── model/dto/response/PageResult.java
-├── model/enums/OrderStatus.java
+└── model/dto/response/PageResult.java
+
 backend/src/main/resources/mapper/OrderMapper.xml
 ```
 

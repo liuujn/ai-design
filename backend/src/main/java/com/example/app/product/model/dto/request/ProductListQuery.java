@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 public class ProductListQuery {
     private String keyword;
+    private String categoryId;
     private String category;
     private String status;
     @Min(1) private Integer page = 1;

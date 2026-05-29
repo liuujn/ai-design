@@ -100,7 +100,7 @@ build/                # 忽略 build 目录
 # 远程地址：https://github.com/liuujn/ai-design.git
 git add .
 git commit -m "feat: 添加新功能"
-git push origin main
+git push ai-design master
 ```
 
 ## 拉取远程更新示例

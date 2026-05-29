@@ -47,7 +47,12 @@
               <div v-show="showSearch" class="px-4 py-3 border-t border-gray-200">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div><label class="block text-xs text-gray-500 mb-1">关键词</label><input v-model="sf.keyword" placeholder="名称/描述" @keyup.enter="search" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200" /></div>
-                  <div><label class="block text-xs text-gray-500 mb-1">分类</label><input v-model="sf.category" placeholder="请输入" @keyup.enter="search" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200" /></div>
+                  <div><label class="block text-xs text-gray-500 mb-1">分类</label>
+                    <select v-model="sf.categoryId" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 bg-white">
+                      <option value="">全部</option>
+                      <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+                    </select>
+                  </div>
                   <div><label class="block text-xs text-gray-500 mb-1">状态</label>
                     <select v-model="sf.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 bg-white">
                       <option value="">全部</option>
@@ -93,6 +98,7 @@
                     <td class="px-4 py-3 text-center">
                       <button @click.stop="doDetail(row)" class="text-purple-600 hover:text-purple-800 text-xs font-medium transition-colors duration-200">编辑</button>
                       <button @click.stop="doToggleStatus(row)" class="text-amber-600 hover:text-amber-800 text-xs font-medium ml-3 transition-colors duration-200">{{ row.status === 'active' ? '下架' : '上架' }}</button>
+                      <button @click.stop="addToCart(row)" class="text-cyan-600 hover:text-cyan-800 text-xs font-medium ml-3 transition-colors duration-200">加购</button>
                       <button @click.stop="doDelete(row)" class="text-red-500 hover:text-red-700 text-xs font-medium ml-3 transition-colors duration-200">删除</button>
                     </td>
                   </tr>
@@ -152,7 +158,10 @@
                 <input v-model.number="f.stock" type="number" min="0" placeholder="0" :disabled="!editable" class="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-400" />
               </div>
               <div><span class="text-gray-400 text-xs">分类</span>
-                <input v-model="f.category" placeholder="请输入商品分类" :disabled="!editable" class="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-400" />
+                <select v-model="f.categoryId" :disabled="!editable" class="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 bg-white disabled:bg-gray-50">
+                  <option value="">无分类</option>
+                  <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </select>
               </div>
               <div><span class="text-gray-400 text-xs">图片URL</span>
                 <input v-model="f.imageUrl" placeholder="https://..." :disabled="!editable" class="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-400" />
@@ -203,12 +212,13 @@
               const editMode = ref('view')
               const editable = computed(() => editMode.value !== 'view')
               const showSearch = ref(true)
-              const sf = reactive({ keyword: '', category: '', status: '' })
+              const categories = ref([])
+              const sf = reactive({ keyword: '', categoryId: '', status: '' })
               const pg = reactive({ page: 1, size: 20 })
               const total = ref(0)
               const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pg.size)))
               const list = ref([])
-              const f = reactive({ id: '', name: '', description: '', price: '', stock: 0, category: '', imageUrl: '', status: 'active', createdAt: '', updatedAt: '' })
+              const f = reactive({ id: '', name: '', description: '', price: '', stock: 0, categoryId: '', category: '', imageUrl: '', status: 'active', createdAt: '', updatedAt: '' })
               const sv = ref('')
               let st = null
               const toast = (msg) => { sv.value = msg; if (st) clearTimeout(st); st = setTimeout(() => sv.value = '', 3000) }
@@ -221,7 +231,7 @@
               async function doFetch() {
                 loading.value = true
                 try {
-                  const res = await api.get('/products', { params: { keyword: sf.keyword || undefined, category: sf.category || undefined, status: sf.status || undefined, page: pg.page, size: pg.size } })
+                  const res = await api.get('/products', { params: { keyword: sf.keyword || undefined, categoryId: sf.categoryId || undefined, status: sf.status || undefined, page: pg.page, size: pg.size } })
                   var body = res.data
                   total.value = body.total ?? 0
                   list.value = body.content ?? []
@@ -231,20 +241,20 @@
               }
 
               function search() { pg.page = 1; doFetch() }
-              function clear() { Object.assign(sf, { keyword: '', category: '', status: '' }); pg.page = 1 }
+              function clear() { Object.assign(sf, { keyword: '', categoryId: '', status: '' }); pg.page = 1 }
 
               async function doDetail(row) {
                 editMode.value = 'view'; viewMode.value = 'edit'
                 try {
                   var res = await api.get('/products/' + row.id)
                   var d = res.data
-                  Object.assign(f, { id: d.id, name: d.name, description: d.description || '', price: d.price, stock: d.stock ?? 0, category: d.category || '', imageUrl: d.imageUrl || '', status: d.status || 'active', createdAt: d.createdAt, updatedAt: d.updatedAt })
+                  Object.assign(f, { id: d.id, name: d.name, description: d.description || '', price: d.price, stock: d.stock ?? 0, categoryId: d.categoryId || '', category: d.category || '', imageUrl: d.imageUrl || '', status: d.status || 'active', createdAt: d.createdAt, updatedAt: d.updatedAt })
                 } catch (e) { toast('获取商品详情失败'); doBack() }
               }
 
               function doCreate() {
                 editMode.value = 'create'; viewMode.value = 'edit'
-                Object.assign(f, { id: '', name: '', description: '', price: '', stock: 0, category: '', imageUrl: '', status: 'active', createdAt: '', updatedAt: '' })
+                Object.assign(f, { id: '', name: '', description: '', price: '', stock: 0, categoryId: '', category: '', imageUrl: '', status: 'active', createdAt: '', updatedAt: '' })
               }
 
               function switchEdit() { editMode.value = 'edit' }
@@ -259,7 +269,7 @@
               async function doSave() {
                 if (!validate()) return
                 try {
-                  var bodyReq = { name: f.name, description: f.description || undefined, price: Number(f.price), stock: f.stock, category: f.category || undefined, imageUrl: f.imageUrl || undefined, status: f.status }
+                  var bodyReq = { name: f.name, description: f.description || undefined, price: Number(f.price), stock: f.stock, categoryId: f.categoryId || undefined, category: f.category || undefined, imageUrl: f.imageUrl || undefined, status: f.status }
                   if (editMode.value === 'create') {
                     await api.post('/products', bodyReq)
                   } else {
@@ -313,9 +323,30 @@
                 }
               }
 
-              onMounted(() => doFetch())
+              async function fetchCategories() {
+                try {
+                  var res = await api.get('/categories/all-active')
+                  categories.value = res.data ?? []
+                } catch (e) { /* ignore */ }
+              }
 
-              return { loading, viewMode, editMode, editable, showSearch, sf, pg, total, totalPages, list, f, sv, cv, search, clear, doCreate, doDetail, switchEdit, doSave, doCancel, doBack, doDelete, doToggleStatus, cOk, cCancel }
+              async function addToCart(row) {
+                if (row.status !== 'active') { toast('商品已下架，无法加入购物车'); return }
+                try {
+                  var res = await api.post('/carts/items', { productId: row.id, quantity: 1 })
+                  var item = res.data
+                  toast('已加入购物车：' + item.productName + ' x' + item.quantity)
+                } catch (e) {
+                  if (e.response?.status === 401) return
+                  var msg = e.response?.data?.message || '加入购物车失败'
+                  if (e.response?.data?.code === 'E9403') msg = '库存不足'
+                  toast(msg)
+                }
+              }
+
+              onMounted(() => { doFetch(); fetchCategories() })
+
+              return { categories, loading, viewMode, editMode, editable, showSearch, sf, pg, total, totalPages, list, f, sv, cv, search, clear, doCreate, doDetail, switchEdit, doSave, doCancel, doBack, doDelete, doToggleStatus, addToCart, cOk, cCancel }
             }
           }
         }

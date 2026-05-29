@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.app.cart.mapper.CartMapper">
+
+    <resultMap id="CartResultMap" type="com.example.app.cart.model.entity.Cart">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="address_id" property="addressId"/>
+        <result column="status" property="status"/>
+        <result column="total_amount" property="totalAmount"/>
+        <result column="remark" property="remark"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="is_deleted" property="isDeleted"/>
+    </resultMap>
+
+    <resultMap id="CartItemResultMap" type="com.example.app.cart.model.entity.CartItem">
+        <id column="id" property="id"/>
+        <result column="cart_id" property="cartId"/>
+        <result column="product_id" property="productId"/>
+        <result column="product_name" property="productName"/>
+        <result column="quantity" property="quantity"/>
+        <result column="unit_price" property="unitPrice"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="is_deleted" property="isDeleted"/>
+    </resultMap>
+
+    <sql id="CartColumns">
+        id, user_id, address_id, status, total_amount, remark,
+        created_at, created_by, updated_at, updated_by, is_deleted
+    </sql>
+
+    <sql id="CartItemColumns">
+        id, cart_id, product_id, product_name, quantity, unit_price,
+        created_at, created_by, updated_at, updated_by, is_deleted
+    </sql>
+
+    <select id="selectActiveByUserId" resultMap="CartResultMap">
+        SELECT <include refid="CartColumns"/>
+        FROM carts
+        WHERE user_id = #{userId} AND status = 'active' AND is_deleted = 0
+        ORDER BY created_at DESC
+        FETCH FIRST 1 ROWS ONLY
+    </select>
+
+    <select id="selectById" resultMap="CartResultMap">
+        SELECT <include refid="CartColumns"/>
+        FROM carts WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectUpdatedAtById" resultType="java.time.LocalDateTime">
+        SELECT updated_at FROM carts WHERE id = #{id}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO carts (id, user_id, address_id, status, total_amount, remark,
+                           created_at, created_by, updated_at, updated_by, is_deleted)
+        VALUES (#{id}, #{userId}, #{addressId, jdbcType=VARCHAR}, #{status}, #{totalAmount},
+                #{remark, jdbcType=VARCHAR}, SYSTIMESTAMP, #{createdBy}, SYSTIMESTAMP, #{createdBy}, 0)
+    </insert>
+
+    <update id="updateByIdAndUpdatedAt">
+        UPDATE carts
+        <set>
+            <if test="addressId != null">address_id = #{addressId},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="totalAmount != null">total_amount = #{totalAmount},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{updatedBy}
+        </set>
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="clearCartItems">
+        UPDATE cart_items
+        SET is_deleted = 1, updated_at = SYSTIMESTAMP, updated_by = #{updatedBy}
+        WHERE cart_id = #{cartId} AND updated_at = #{updatedAt}
+    </update>
+
+    <select id="selectItemsByCartId" resultMap="CartItemResultMap">
+        SELECT <include refid="CartItemColumns"/>
+        FROM cart_items
+        WHERE cart_id = #{cartId} AND is_deleted = 0
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="selectItemById" resultMap="CartItemResultMap">
+        SELECT <include refid="CartItemColumns"/>
+        FROM cart_items WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectItemByCartIdAndProductId" resultMap="CartItemResultMap">
+        SELECT <include refid="CartItemColumns"/>
+        FROM cart_items
+        WHERE cart_id = #{cartId} AND product_id = #{productId} AND is_deleted = 0
+    </select>
+
+    <insert id="insertItem">
+        INSERT INTO cart_items (id, cart_id, product_id, product_name, quantity, unit_price,
+                                created_at, created_by, updated_at, updated_by, is_deleted)
+        VALUES (#{id}, #{cartId}, #{productId}, #{productName}, #{quantity}, #{unitPrice},
+                SYSTIMESTAMP, #{createdBy}, SYSTIMESTAMP, #{createdBy}, 0)
+    </insert>
+
+    <update id="updateItemQuantity">
+        UPDATE cart_items
+        SET quantity = #{quantity}, updated_at = SYSTIMESTAMP
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="deleteItemByIdAndUpdatedAt">
+        UPDATE cart_items
+        SET is_deleted = 1, updated_at = SYSTIMESTAMP
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <select id="selectItemUpdatedAtById" resultType="java.time.LocalDateTime">
+        SELECT updated_at FROM cart_items WHERE id = #{id}
+    </select>
+
+</mapper>

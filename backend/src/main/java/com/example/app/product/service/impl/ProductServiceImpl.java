@@ -1,5 +1,6 @@
 package com.example.app.product.service.impl;
 
+import com.example.app.category.mapper.CategoryMapper;
 import com.example.app.product.mapper.ProductMapper;
 import com.example.app.product.model.dto.request.*;
 import com.example.app.product.model.dto.response.*;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductMapper productMapper;
+    private final CategoryMapper categoryMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -47,6 +49,7 @@ public class ProductServiceImpl implements ProductService {
             vo.setName(p.getName());
             vo.setPrice(p.getPrice());
             vo.setStock(p.getStock());
+            vo.setCategoryId(p.getCategoryId());
             vo.setCategory(p.getCategory());
             vo.setStatus(p.getStatus());
             vo.setCreatedAt(p.getCreatedAt() != null ? p.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")) : null);
@@ -76,6 +79,7 @@ public class ProductServiceImpl implements ProductService {
         vo.setDescription(product.getDescription());
         vo.setPrice(product.getPrice());
         vo.setStock(product.getStock());
+        vo.setCategoryId(product.getCategoryId());
         vo.setCategory(product.getCategory());
         vo.setImageUrl(product.getImageUrl());
         vo.setStatus(product.getStatus());
@@ -96,7 +100,15 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setStock(request.getStock() != null ? request.getStock() : 0);
-        product.setCategory(request.getCategory());
+        if (request.getCategoryId() != null) {
+            var cat = categoryMapper.selectById(request.getCategoryId());
+            if (cat != null) {
+                product.setCategoryId(request.getCategoryId());
+                product.setCategory(cat.getName());
+            }
+        } else {
+            product.setCategory(request.getCategory());
+        }
         product.setImageUrl(request.getImageUrl());
         product.setStatus(request.getStatus() != null ? request.getStatus() : "active");
         product.setCreatedBy(operatorId);
@@ -108,6 +120,7 @@ public class ProductServiceImpl implements ProductService {
         vo.setName(product.getName());
         vo.setPrice(product.getPrice());
         vo.setStock(product.getStock());
+        vo.setCategoryId(product.getCategoryId());
         vo.setStatus(product.getStatus());
         vo.setCreatedAt(product.getCreatedAt() != null ? product.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")) : null);
         return vo;
@@ -132,7 +145,15 @@ public class ProductServiceImpl implements ProductService {
         updateProduct.setDescription(request.getDescription());
         updateProduct.setPrice(request.getPrice());
         updateProduct.setStock(request.getStock());
-        updateProduct.setCategory(request.getCategory());
+        if (request.getCategoryId() != null) {
+            var cat = categoryMapper.selectById(request.getCategoryId());
+            if (cat != null) {
+                updateProduct.setCategoryId(request.getCategoryId());
+                updateProduct.setCategory(cat.getName());
+            }
+        } else {
+            updateProduct.setCategory(request.getCategory());
+        }
         updateProduct.setImageUrl(request.getImageUrl());
         updateProduct.setStatus(request.getStatus());
         updateProduct.setUpdatedAt(currentUpdatedAt);

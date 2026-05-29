@@ -24,6 +24,8 @@ public class ProductCreateRequest {
     @Min(value = 0, message = "库存不能小于0")
     private Integer stock;
 
+    private String categoryId;
+
     @Size(max = 100)
     private String category;
 

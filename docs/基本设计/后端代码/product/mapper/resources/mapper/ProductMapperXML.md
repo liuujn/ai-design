@@ -1,0 +1,107 @@
+# ProductMapperXML
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.app.product.mapper.ProductMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.app.product.model.entity.Product">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="price" property="price"/>
+        <result column="stock" property="stock"/>
+        <result column="category" property="category"/>
+        <result column="image_url" property="imageUrl"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="is_deleted" property="isDeleted"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, name, description, price, stock, category, image_url,
+        status, created_at, created_by, updated_at, updated_by, is_deleted
+    </sql>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT * FROM (
+            SELECT T.*, ROWNUM RN FROM (
+                SELECT id, name, price, stock, category, status, created_at, updated_at
+                FROM products
+                <where>
+                    is_deleted = 0
+                    <if test="keyword != null and keyword != ''">
+                        AND (name LIKE '%' || #{keyword} || '%' OR description LIKE '%' || #{keyword} || '%')
+                    </if>
+                    <if test="category != null and category != ''">AND category = #{category}</if>
+                    <if test="status != null and status != ''">AND status = #{status}</if>
+                </where>
+                ORDER BY created_at DESC
+            ) T WHERE ROWNUM &lt;= #{offset} + #{size}
+        ) WHERE RN > #{offset}
+    </select>
+
+    <select id="count" resultType="Long">
+        SELECT COUNT(*) FROM products
+        <where>
+            is_deleted = 0
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE '%' || #{keyword} || '%' OR description LIKE '%' || #{keyword} || '%')
+            </if>
+            <if test="category != null and category != ''">AND category = #{category}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/>
+        FROM products WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectUpdatedAtById" resultType="java.time.LocalDateTime">
+        SELECT updated_at FROM products WHERE id = #{id}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO products (id, name, description, price, stock, category, image_url,
+                              status, created_at, created_by, updated_at, updated_by, is_deleted)
+        VALUES (#{id}, #{name}, #{description, jdbcType=VARCHAR}, #{price}, #{stock},
+                #{category, jdbcType=VARCHAR}, #{imageUrl, jdbcType=VARCHAR},
+                #{status}, SYSTIMESTAMP, #{createdBy}, SYSTIMESTAMP, #{createdBy}, 0)
+    </insert>
+
+    <update id="updateByIdAndUpdatedAt">
+        UPDATE products
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="price != null">price = #{price},</if>
+            <if test="stock != null">stock = #{stock},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="imageUrl != null">image_url = #{imageUrl},</if>
+            <if test="status != null">status = #{status},</if>
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{updatedBy}
+        </set>
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="logicDeleteByIdAndUpdatedAt">
+        UPDATE products
+        SET is_deleted = 1, updated_at = SYSTIMESTAMP, updated_by = #{updatedBy}
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="updateStatusByIdAndUpdatedAt">
+        UPDATE products
+        SET status = #{status},
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{updatedBy}
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+</mapper>
+```
