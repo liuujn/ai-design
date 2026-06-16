@@ -27,6 +27,7 @@
 </head>
 <body>
   <script id="tpl" type="text/x-template">
+    <template v-if="viewGranted">
     <div class="min-h-screen bg-gray-50 font-sans text-gray-700">
       <div class="max-w-5xl mx-auto p-6">
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-2 border-t-cyan-500 p-6">
@@ -41,7 +42,7 @@
           <div v-if="!cart" class="text-center py-16">
             <div class="text-6xl mb-4">&#x1F6D2;</div>
             <p class="text-gray-400 text-lg mb-4">购物车是空的</p>
-            <p class="text-gray-300 text-sm">快去 <a href="商品.html" target="_parent" class="text-cyan-600 hover:text-cyan-800 font-medium">商品管理</a> 添加商品吧</p>
+            <p class="text-gray-300 text-sm">快去 <a href="product.html" target="_parent" class="text-cyan-600 hover:text-cyan-800 font-medium">商品管理</a> 添加商品吧</p>
           </div>
 
           <div v-if="cart" class="space-y-4">
@@ -90,7 +91,7 @@
                       </td>
                       <td class="px-4 py-3 text-right tabular-nums font-medium text-cyan-700">￥{{ computeSubtotal(item) }}</td>
                       <td class="px-4 py-3 text-center">
-                        <button @click="doDeleteItem(item)" class="text-red-500 hover:text-red-700 text-xs font-medium transition-colors duration-200">删除</button>
+                         <button v-if="actions.includes('delete')" @click="doDeleteItem(item)" class="text-red-500 hover:text-red-700 text-xs font-medium transition-colors duration-200">Delete</button>
                       </td>
                     </tr>
                   </tbody>
@@ -107,7 +108,7 @@
 
               <div class="flex justify-end mt-4 gap-3">
                 <button @click="goShopping" class="px-6 py-2.5 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">继续购物</button>
-                <button @click="doCheckout" :disabled="!cart.addressId" :class="cart.addressId ? 'bg-cyan-600 hover:bg-cyan-700 cursor-pointer shadow-sm' : 'bg-gray-300 cursor-not-allowed'" class="px-6 py-2.5 text-white text-sm font-medium rounded-lg transition-colors duration-200">结算下单</button>
+                <button v-if="actions.includes('checkout')" @click="doCheckout" :disabled="!cart.addressId" :class="cart.addressId ? 'bg-cyan-600 hover:bg-cyan-700 cursor-pointer shadow-sm' : 'bg-gray-300 cursor-not-allowed'" class="px-6 py-2.5 text-white text-sm font-medium rounded-lg transition-colors duration-200">Checkout</button>
               </div>
               <p v-if="!cart.addressId" class="text-right text-xs text-amber-500 mt-1">请先选择配送地址</p>
             </div>
@@ -155,19 +156,26 @@
 
       <div v-if="sv" class="fixed bottom-4 right-4 px-5 py-2.5 bg-gray-800 text-white text-sm rounded-lg shadow-lg z-50 transition-all duration-300">{{ sv }}</div>
     </div>
-  </script>
+  </template>
+  <template v-else>
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 text-gray-400 text-sm p-6">
+      No permission to view this page.
+    </div>
+  </template>
+</script>
 
   <div id="app"><cart-page></cart-page></div>
   <script>
     ;(function boot(){
       if (!_vueOk || !_axiosOk) { _queue.push(boot); return }
-      if (!localStorage.getItem('auth_token')) { window.location.href = '登录.html'; return }
+      if (!localStorage.getItem('auth_token')) { window.location.href = 'login.html'; return }
 
       const { ref, reactive, computed, onMounted, createApp } = Vue
       const api = axios.create({ baseURL: 'http://localhost:9090/api/v1', timeout: 10000, headers: { 'Content-Type': 'application/json' } })
       api.interceptors.request.use(cfg => { var t = localStorage.getItem('auth_token'); if (t) cfg.headers.Authorization = 'Bearer ' + t; return cfg })
-      api.interceptors.response.use(function(r){return r}, function(e){ if (e.response && e.response.status === 401) { localStorage.removeItem('auth_token'); window.location.href = '登录.html' }; return Promise.reject(e) })
+      api.interceptors.response.use(function(r){return r}, function(e){ if (e.response && e.response.status === 401) { localStorage.removeItem('auth_token'); window.location.href = 'login.html' }; return Promise.reject(e) })
 
+      const MENU_ID = new URLSearchParams(window.location.search).get('menuId') || 'm008'
       createApp({
         components: {
           'cart-page': {
@@ -176,6 +184,8 @@
               const loading = ref(false)
               const cart = ref(null)
               const showAddressPicker = ref(false)
+              const actions = ref([])
+              const viewGranted = ref(true)
               const addresses = ref([])
               const addressLoading = ref(false)
               const sv = ref('')
@@ -308,7 +318,7 @@
               }
 
               function goShopping() {
-                window.parent.postMessage({ type: 'switchMenu', index: 5 }, '*')
+                window.parent.postMessage({ type: 'switchMenu', label: 'Product Mgmt' }, '*')
               }
 
               function openAddressPicker() {
@@ -316,9 +326,13 @@
                 showAddressPicker.value = true
               }
 
-              onMounted(() => { fetchCart() })
+              async function fetchActions() {
+                try { var r = await api.get('/permissions/my-actions/' + MENU_ID); actions.value = r.data ?? []; if (!actions.value.includes('view')) viewGranted.value = false } catch(e) {}
+              }
 
-              return { loading, cart, showAddressPicker, addresses, addressLoading, sv, cv, refresh, computeSubtotal, decreaseQty, increaseQty, doDeleteItem, pickAddress, doCheckout, clearCart, goShopping, openAddressPicker, cOk, cCancel, fetchAddresses }
+              onMounted(() => { fetchCart(); fetchActions() })
+
+              return { loading, cart, showAddressPicker, addresses, addressLoading, sv, cv, actions, viewGranted, refresh, computeSubtotal, decreaseQty, increaseQty, doDeleteItem, pickAddress, doCheckout, clearCart, goShopping, openAddressPicker, cOk, cCancel, fetchAddresses }
             }
           }
         }

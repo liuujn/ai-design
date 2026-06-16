@@ -60,7 +60,10 @@ extra_css:
   - 'css/custom.css'
 
 nav:
-  - TOP: git.md
+  - TOP: 
+    - SmartLips: SmartLips.md
+    - LServer: LServer知识点整理.md
+    - java: java-tech-stack-guide.md
   - 基本设计:
     - 基本设计/Messages.md
     - 项目入口: 基本设计/画面/主页.html
@@ -94,10 +97,12 @@ nav:
       - 订单管理: 基本设计/后端代码/order/index.md
       - 购物车管理: 基本设计/后端代码/cart/index.md
     - "画面(HTML)":
-      - 登录画面: 基本设计/画面/登录.html
-      - 用户画面: 基本设计/画面/用户.html
-      - 地址画面: 基本设计/画面/地址.html
-      - 商品分类画面: 基本设计/画面/商品分类.html
-      - 商品画面: 基本设计/画面/商品.html
-      - 订单画面: 基本设计/画面/订单.html
-      - 购物车画面: 基本设计/画面/购物车.html
+      - 登录画面: 基本设计/画面/login.html
+      - 用户画面: 基本设计/画面/user.html
+      - 地址画面: 基本设计/画面/address.html
+      - 商品分类画面: 基本设计/画面/category.html
+      - 商品画面: 基本设计/画面/product.html
+      - 订单画面: 基本设计/画面/order.html
+      - 购物车画面: 基本设计/画面/cart.html
+      - 菜单管理画面: 基本设计/画面/menu.html
+      - 权限管理画面: 基本设计/画面/permission.html

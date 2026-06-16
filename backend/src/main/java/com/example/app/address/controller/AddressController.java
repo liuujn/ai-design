@@ -7,6 +7,7 @@ import com.example.app.user.model.dto.response.PageResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,6 +19,10 @@ public class AddressController {
 
     @GetMapping
     public ResponseEntity<PageResult<AddressListVO>> list(@Valid AddressListQuery query) {
+        String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!"u001".equals(userId)) {
+            query.setUserId(userId);
+        }
         return ResponseEntity.ok(addressService.list(query));
     }
 
@@ -28,21 +33,21 @@ public class AddressController {
 
     @PostMapping
     public ResponseEntity<AddressCreateVO> create(@Valid @RequestBody AddressCreateRequest request) {
-        String operatorId = "SYSTEM";
+        String operatorId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(addressService.create(request, operatorId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<AddressUpdateVO> update(@PathVariable String id,
                                                    @Valid @RequestBody AddressUpdateRequest request) {
-        String operatorId = "SYSTEM";
+        String operatorId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(addressService.update(id, request, operatorId));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id,
                                         @Valid @RequestBody AddressDeleteRequest request) {
-        String operatorId = "SYSTEM";
+        String operatorId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         addressService.delete(id, request, operatorId);
         return ResponseEntity.noContent().build();
     }
@@ -50,7 +55,7 @@ public class AddressController {
     @PatchMapping("/{id}/default")
     public ResponseEntity<AddressDefaultVO> setDefault(@PathVariable String id,
                                                         @Valid @RequestBody AddressDefaultRequest request) {
-        String operatorId = "SYSTEM";
+        String operatorId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(addressService.setDefault(id, request, operatorId));
     }
 }

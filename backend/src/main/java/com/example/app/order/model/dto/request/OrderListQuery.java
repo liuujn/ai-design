@@ -7,6 +7,7 @@ import lombok.Data;
 public class OrderListQuery {
     private String keyword;
     private String status;
+    private String createdBy;
     @Min(1) private Integer page = 1;
     @Min(1) private Integer size = 20;
 

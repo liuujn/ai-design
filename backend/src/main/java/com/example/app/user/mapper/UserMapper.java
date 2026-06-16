@@ -19,6 +19,8 @@ public interface UserMapper {
 
     User selectByUsername(@Param("username") String username);
 
+    User selectByOpenId(@Param("openId") String openId);
+
     User selectByEmail(@Param("email") String email);
 
     User selectByEmailExcludeId(@Param("email") String email, @Param("excludeId") String excludeId);

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.gitattributes
+mkdocs.yml
+site/
+node_modules/
+__pycache__/
+*.pyc
+*.log
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+temp_*
+*.md

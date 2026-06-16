@@ -27,15 +27,16 @@
 </head>
 <body>
   <script id="tpl" type="text/x-template">
+    <template v-if="viewGranted">
     <div class="min-h-screen bg-gray-50 font-sans text-gray-700">
       <template v-if="viewMode === 'list'">
         <div class="max-w-7xl mx-auto p-6">
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-2 border-t-orange-500 p-6">
             <div class="flex items-center justify-between mb-6">
               <h2 class="text-xl font-bold text-gray-800 tracking-tight">地址管理</h2>
-              <button @click="doCreate" class="inline-flex items-center gap-1.5 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors duration-200 shadow-sm">
+              <button v-if="actions.includes('create')" @click="doCreate" class="inline-flex items-center gap-1.5 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors duration-200 shadow-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                新建地址
+                New
               </button>
             </div>
 
@@ -91,9 +92,9 @@
                     </td>
                     <td class="px-4 py-3 text-gray-500 tabular-nums">{{ row.createdAt }}</td>
                     <td class="px-4 py-3 text-center">
-                      <button @click.stop="doDetail(row)" class="text-orange-600 hover:text-orange-800 text-xs font-medium transition-colors duration-200">编辑</button>
-                      <button @click.stop="doDelete(row)" class="text-red-500 hover:text-red-700 text-xs font-medium ml-3 transition-colors duration-200">删除</button>
-                      <button v-if="!row.isDefault" @click.stop="doSetDefault(row)" class="text-amber-600 hover:text-amber-800 text-xs font-medium ml-3 transition-colors duration-200">设为默认</button>
+                      <button v-if="actions.includes('edit')" @click.stop="doDetail(row)" class="text-orange-600 hover:text-orange-800 text-xs font-medium transition-colors duration-200">Edit</button>
+                      <button v-if="actions.includes('delete')" @click.stop="doDelete(row)" class="text-red-500 hover:text-red-700 text-xs font-medium ml-3 transition-colors duration-200">Delete</button>
+                      <button v-if="actions.includes('set_default') && !row.isDefault" @click.stop="doSetDefault(row)" class="text-amber-600 hover:text-amber-800 text-xs font-medium ml-3 transition-colors duration-200">Set default</button>
                     </td>
                   </tr>
                 </tbody>
@@ -109,9 +110,9 @@
                   <option :value="20">20条/页</option>
                   <option :value="50">50条/页</option>
                 </select>
-                <button :disabled="pg.page <= 1" @click="pg.page--;search()" :class="pg.page <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'" class="px-3 py-1.5 border border-gray-300 rounded-lg transition-colors duration-200 font-medium">上一页</button>
+                <button :disabled="pg.page <= 1" @click="pg.page--;doFetch()" :class="pg.page <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'" class="px-3 py-1.5 border border-gray-300 rounded-lg transition-colors duration-200 font-medium">上一页</button>
                 <span class="px-2 text-gray-600 font-medium">{{ pg.page }} / {{ totalPages }}</span>
-                <button :disabled="pg.page >= totalPages" @click="pg.page++;search()" :class="pg.page >= totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'" class="px-3 py-1.5 border border-gray-300 rounded-lg transition-colors duration-200 font-medium">下一页</button>
+                <button :disabled="pg.page >= totalPages" @click="pg.page++;doFetch()" :class="pg.page >= totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'" class="px-3 py-1.5 border border-gray-300 rounded-lg transition-colors duration-200 font-medium">下一页</button>
               </div>
             </div>
           </div>
@@ -126,7 +127,7 @@
               <div class="flex gap-2">
                 <button @click="doBack" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">返回</button>
                 <button v-if="editMode !== 'view'" @click="doSave" class="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors duration-200 shadow-sm">保存</button>
-                <button v-if="editMode === 'view'" @click="switchEdit" class="px-4 py-2 border border-orange-300 text-orange-600 text-sm rounded-lg hover:bg-orange-50 transition-colors duration-200">编辑</button>
+                <button v-if="editMode === 'view' && actions.includes('edit')" @click="switchEdit" class="px-4 py-2 border border-orange-300 text-orange-600 text-sm rounded-lg hover:bg-orange-50 transition-colors duration-200">Edit</button>
                 <button v-if="editMode !== 'create'" @click="doCancel" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors duration-200">取消</button>
               </div>
             </div>
@@ -191,19 +192,26 @@
 
       <div v-if="sv" class="fixed bottom-4 right-4 px-5 py-2.5 bg-gray-800 text-white text-sm rounded-lg shadow-lg z-50 transition-all duration-300">{{ sv }}</div>
     </div>
-  </script>
+  </template>
+  <template v-else>
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 text-gray-400 text-sm p-6">
+      No permission to view this page.
+    </div>
+  </template>
+</script>
 
   <div id="app"><address-page></address-page></div>
   <script>
     ;(function boot(){
       if (!_vueOk || !_axiosOk) { _queue.push(boot); return }
-      if (!localStorage.getItem('auth_token')) { window.location.href = '登录.html'; return }
+      if (!localStorage.getItem('auth_token')) { window.location.href = 'login.html'; return }
 
       const { ref, reactive, computed, onMounted, createApp } = Vue
       const api = axios.create({ baseURL: 'http://localhost:9090/api/v1', timeout: 10000, headers: { 'Content-Type': 'application/json' } })
       api.interceptors.request.use(cfg => { var t = localStorage.getItem('auth_token'); if (t) cfg.headers.Authorization = 'Bearer ' + t; return cfg })
-      api.interceptors.response.use(function(r){return r}, function(e){ if (e.response && e.response.status === 401) { localStorage.removeItem('auth_token'); window.location.href = '登录.html' }; return Promise.reject(e) })
+      api.interceptors.response.use(function(r){return r}, function(e){ if (e.response && e.response.status === 401) { localStorage.removeItem('auth_token'); window.location.href = 'login.html' }; return Promise.reject(e) })
 
+      const MENU_ID = new URLSearchParams(window.location.search).get('menuId') || 'm004'
       createApp({
         components: {
           'address-page': {
@@ -212,6 +220,8 @@
               const loading = ref(false)
               const viewMode = ref('list')
               const editMode = ref('view')
+              const actions = ref([])
+              const viewGranted = ref(true)
               const editable = computed(() => editMode.value !== 'view')
               const showSearch = ref(true)
               const sf = reactive({ addressType: '', recipientName: '' })
@@ -326,9 +336,13 @@
                 }
               }
 
-              onMounted(() => doFetch())
+              async function fetchActions() {
+                try { var r = await api.get('/permissions/my-actions/' + MENU_ID); actions.value = r.data ?? []; if (!actions.value.includes('view')) viewGranted.value = false } catch(e) {}
+              }
 
-              return { loading, viewMode, editMode, editable, showSearch, sf, pg, total, totalPages, list, f, sv, cv, search, clear, doCreate, doDetail, switchEdit, doSave, doCancel, doBack, doDelete, doSetDefault, cOk, cCancel }
+              onMounted(() => { doFetch(); fetchActions() })
+
+              return { loading, viewMode, editMode, editable, showSearch, sf, pg, total, totalPages, list, f, sv, cv, actions, viewGranted, doFetch, search, clear, doCreate, doDetail, switchEdit, doSave, doCancel, doBack, doDelete, doSetDefault, cOk, cCancel }
             }
           }
         }

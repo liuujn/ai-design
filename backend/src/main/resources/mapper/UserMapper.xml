@@ -9,6 +9,7 @@
         <result column="email" property="email"/>
         <result column="phone" property="phone"/>
         <result column="password_hash" property="passwordHash"/>
+        <result column="open_id" property="openId"/>
         <result column="status" property="status"/>
         <result column="mfa_enabled" property="mfaEnabled"/>
         <result column="mfa_secret" property="mfaSecret"/>
@@ -20,7 +21,7 @@
     </resultMap>
 
     <sql id="BaseColumns">
-        id, username, display_name, email, phone, password_hash, status,
+        id, username, display_name, email, phone, password_hash, open_id, status,
         mfa_enabled, mfa_secret, created_at, created_by, updated_at, updated_by, is_deleted
     </sql>
 
@@ -37,6 +38,9 @@
                     </if>
                     <if test="status != null and status != ''">
                         AND status = #{status}
+                    </if>
+                    <if test="id != null and id != ''">
+                        AND id = #{id}
                     </if>
                 </where>
                 ORDER BY created_at DESC
@@ -56,6 +60,9 @@
             <if test="status != null and status != ''">
                 AND status = #{status}
             </if>
+            <if test="id != null and id != ''">
+                AND id = #{id}
+            </if>
         </where>
     </select>
 
@@ -69,6 +76,12 @@
         SELECT <include refid="BaseColumns"/>
         FROM users
         WHERE username = #{username} AND is_deleted = 0
+    </select>
+
+    <select id="selectByOpenId" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/>
+        FROM users
+        WHERE open_id = #{openId} AND is_deleted = 0
     </select>
 
     <select id="selectByEmail" resultMap="BaseResultMap">

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>权限管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    var _vueOk = false, _axiosOk = false, _queue = []
+    function _tryCDN(name, urls, i) {
+      if (i >= urls.length) return
+      var s = document.createElement('script')
+      s.src = urls[i]
+      s.onload = function() { if (name === 'vue') _vueOk = true; else _axiosOk = true; while (_queue.length && _vueOk && _axiosOk) _queue.shift()() }
+      s.onerror = function() { _tryCDN(name, urls, i+1) }
+      document.head.appendChild(s)
+    }
+    _tryCDN('vue', ['https://cdnjs.cloudflare.com/ajax/libs/vue/3.5.13/vue.global.prod.js','https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js','https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js'], 0)
+    _tryCDN('axios', ['https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.9/axios.min.js','https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js','https://unpkg.com/axios@1.7.9/dist/axios.min.js'], 0)
+    setTimeout(function() {
+      if (!_vueOk || !_axiosOk) {
+        var el = document.getElementById('app')
+        if (el) el.innerHTML = '<div style="padding:40px;text-align:center;font-size:14px;"><p style="color:red;">依赖加载失败</p><p style="color:#999;margin-top:8px;">请检查网络连接后 <a href="#" onclick="location.reload()" style="color:#3b82f6;">刷新页面</a></p></div>'
+      }
+    }, 15000)
+  </script>
+  <style>
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.25s ease; }
+    .perm-transition { transition: all 0.15s ease; }
+  </style>
+</head>
+<body>
+  <div id="app"><perm-page></perm-page></div>
+
+  <script id="tpl" type="text/x-template">
+    <div class="min-h-screen bg-gray-50 font-sans text-gray-700">
+      <div class="max-w-7xl mx-auto p-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 border-t-2 border-t-blue-500 p-6 fade-in">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-gray-800 tracking-tight">权限管理</h2>
+          </div>
+
+          <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+            只有管理员可以设置用户权限。
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-600 mb-2">选择用户</label>
+            <select v-model="selectedUserId" @change="onUserChange" class="w-64 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+              <option value="">-- 请选择用户 --</option>
+              <option v-for="u in users" :key="u.id" :value="u.id">{{ u.displayName || u.username }} ({{ u.username }})</option>
+            </select>
+          </div>
+
+          <template v-if="selectedUserId">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div class="lg:col-span-1 border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-sm font-semibold text-gray-700">菜单权限</h3>
+                  <button @click="toggleAllMenus" class="text-xs text-blue-600 hover:text-blue-800">{{ allMenusSelected ? 'Deselect All' : 'Select All' }}</button>
+                </div>
+                <div class="space-y-0.5 max-h-96 overflow-y-auto">
+                  <div v-for="m in allMenus" :key="m.id"
+                       @click="selectMenu(m)"
+                       class="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors text-sm"
+                       :class="[m.id === selectedMenuId ? 'bg-blue-100 ring-1 ring-blue-300' : 'hover:bg-gray-100', m.isDivider ? 'opacity-60' : '']">
+                    <div v-if="!m.isDivider" @click.stop class="flex items-center">
+                      <input type="checkbox" :value="m.id" v-model="checkedMenus" class="rounded border-gray-300" />
+                    </div>
+                    <div v-else class="w-4"></div>
+                    <div class="w-4 h-4 flex items-center justify-center flex-shrink-0 text-gray-400" v-html="m.icon || '<svg class=\'w-3.5 h-3.5\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M13 10V3L4 14h7v7l9-11h-7z\'/></svg>'"></div>
+                    <span :class="[checkedMenus.includes(m.id) ? 'text-blue-700 font-medium' : 'text-gray-600', m.isDivider ? 'text-[10px] uppercase tracking-widest text-gray-400 font-medium' : '']">{{ m.label }}</span>
+                  </div>
+                </div>
+                <button @click="saveMenus" :disabled="saving" class="mt-4 w-full px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50">{{ saving ? 'Saving...' : 'Save Menu Permissions' }}</button>
+              </div>
+
+              <div class="lg:col-span-3 border border-gray-200 rounded-lg p-4">
+                <template v-if="selectedMenuId">
+                  <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-700">
+                      Action Permissions for: <span class="text-blue-600">{{ selectedMenuLabel }}</span>
+                    </h3>
+                    <button v-if="selMenuActions.length > 0" @click="toggleSelMenuActions" class="text-xs text-emerald-600 hover:text-emerald-800">{{ selMenuActionsAllSelected ? 'Deselect All' : 'Select All' }}</button>
+                  </div>
+                  <div v-if="selMenuActions.length === 0" class="text-sm text-gray-400 py-8 text-center border-2 border-dashed border-gray-200 rounded-lg">
+                    No actions defined for this menu.
+                  </div>
+                  <div v-else class="flex flex-wrap gap-3">
+                    <div v-for="a in selMenuActions" :key="a.id"
+                         @click="toggleAction(a.id)"
+                         class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:border-emerald-300 transition-colors cursor-pointer select-none"
+                         :class="checkedActions.includes(a.id) ? 'bg-emerald-50 border-emerald-300' : ''">
+                      <input type="checkbox" :value="a.id" :checked="checkedActions.includes(a.id)" @click.stop="toggleAction(a.id)" class="rounded border-gray-300" />
+                      <span class="text-sm" :class="checkedActions.includes(a.id) ? 'text-emerald-700 font-medium' : 'text-gray-600'">{{ a.actionName }}</span>
+                      <span class="text-xs text-gray-400 font-mono">({{ a.actionCode }})</span>
+                    </div>
+                  </div>
+                  <button v-if="selMenuActions.length > 0" @click="saveActions" :disabled="savingActions" class="mt-4 px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50">{{ savingActions ? 'Saving...' : 'Save Action Permissions' }}</button>
+                </template>
+                <div v-else class="flex items-center justify-center h-64 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-lg">
+                  Click a menu on the left to configure its action permissions.
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div v-else class="flex items-center justify-center h-32 text-gray-400 text-sm">
+            请先选择用户
+          </div>
+
+          <div v-if="sv" class="fixed top-4 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-gray-800 text-white text-sm rounded-lg shadow-lg z-50 fade-in">{{ sv }}</div>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script>
+    ;(function boot(){
+      if (!_vueOk || !_axiosOk) { _queue.push(boot); return }
+      if (!localStorage.getItem('auth_token')) { window.location.href = 'login.html'; return }
+
+      const { ref, reactive, computed, onMounted, createApp } = Vue
+
+      const api = axios.create({ baseURL: 'http://localhost:9090/api/v1', timeout: 10000, headers: { 'Content-Type': 'application/json' } })
+      api.interceptors.request.use(cfg => { var t = localStorage.getItem('auth_token'); if (t) cfg.headers.Authorization = 'Bearer ' + t; return cfg })
+      api.interceptors.response.use(r => r, e => { if (e.response && e.response.status === 401) { localStorage.removeItem('auth_token'); window.location.href = 'login.html' }; return Promise.reject(e) })
+
+      createApp({
+        components: {
+          'perm-page': {
+            template: document.getElementById('tpl').innerHTML,
+            setup() {
+              const users = ref([])
+              const allMenus = ref([])
+              const allActions = ref([])
+              const selectedUserId = ref('')
+              const selectedMenuId = ref('')
+              const checkedMenus = ref([])
+              const checkedActions = ref([])
+              const saving = ref(false)
+              const savingActions = ref(false)
+              const sv = ref('')
+
+              const checkableMenus = computed(() => allMenus.value.filter(function(m) { return !m.isDivider }))
+
+              const allMenusSelected = computed(() => checkableMenus.value.length > 0 && checkedMenus.value.length === checkableMenus.value.length)
+
+              const selMenuActions = computed(function() {
+                if (!selectedMenuId.value) return []
+                return allActions.value.filter(function(a) { return a.menuId === selectedMenuId.value })
+              })
+
+              const selMenuActionsAllSelected = computed(() => selMenuActions.value.length > 0 && selMenuActions.value.every(function(a) { return checkedActions.value.includes(a.id) }))
+
+              const selectedMenuLabel = computed(function() {
+                var m = allMenus.value.find(function(x) { return x.id === selectedMenuId.value })
+                return m ? m.label : ''
+              })
+
+              function toggleAllMenus() {
+                if (allMenusSelected.value) checkedMenus.value = []
+                else checkedMenus.value = checkableMenus.value.map(function(m) { return m.id })
+              }
+
+              function selectMenu(m) {
+                if (m.isDivider) return
+                if (selectedMenuId.value === m.id) return
+                selectedMenuId.value = m.id
+              }
+
+              function toggleAction(actionId) {
+                var idx = checkedActions.value.indexOf(actionId)
+                if (idx >= 0) checkedActions.value.splice(idx, 1)
+                else checkedActions.value.push(actionId)
+              }
+
+              function toggleSelMenuActions() {
+                if (selMenuActionsAllSelected.value) {
+                  checkedActions.value = checkedActions.value.filter(function(id) {
+                    return !selMenuActions.value.some(function(a) { return a.id === id })
+                  })
+                } else {
+                  selMenuActions.value.forEach(function(a) {
+                    if (!checkedActions.value.includes(a.id)) checkedActions.value.push(a.id)
+                  })
+                }
+              }
+
+              async function fetchUsers() {
+                try {
+                  var res = await api.get('/users', { params: { size: 100 } })
+                  users.value = res.data.content ?? []
+                } catch (e) { /* ignore */ }
+              }
+
+              async function fetchMenus() {
+                try {
+                  var res = await api.get('/menus', { params: { size: 50 } })
+                  allMenus.value = res.data.content ?? []
+                } catch (e) { /* ignore */ }
+              }
+
+              async function fetchActions() {
+                try {
+                  var res = await api.get('/actions')
+                  allActions.value = res.data ?? []
+                } catch (e) { /* ignore */ }
+              }
+
+              async function onUserChange() {
+                selectedMenuId.value = ''
+                if (!selectedUserId.value) { checkedMenus.value = []; checkedActions.value = []; return }
+                try {
+                  var menuRes = await api.get('/permissions/menus/' + selectedUserId.value)
+                  checkedMenus.value = menuRes.data.menuIds ?? []
+                } catch (e) { checkedMenus.value = [] }
+                try {
+                  var actRes = await api.get('/permissions/actions/' + selectedUserId.value)
+                  checkedActions.value = actRes.data.actionIds ?? []
+                } catch (e) { checkedActions.value = [] }
+              }
+
+              function notifyParent() {
+                try { window.parent.postMessage({ type: 'refreshMenus' }, '*') } catch(e) {}
+              }
+
+              async function saveMenus() {
+                saving.value = true
+                try {
+                  await api.put('/permissions/menus/' + selectedUserId.value, { menuIds: checkedMenus.value })
+                  sv.value = 'Menu permissions saved'
+                  notifyParent()
+                  setTimeout(function() { sv.value = '' }, 2000)
+                } catch (e) { sv.value = 'Save failed'; setTimeout(function() { sv.value = '' }, 2000) }
+                finally { saving.value = false }
+              }
+
+              async function saveActions() {
+                savingActions.value = true
+                try {
+                  await api.put('/permissions/actions/' + selectedUserId.value, { actionIds: checkedActions.value })
+                  sv.value = 'Action permissions saved'
+                  notifyParent()
+                  setTimeout(function() { sv.value = '' }, 2000)
+                } catch (e) { sv.value = 'Save failed'; setTimeout(function() { sv.value = '' }, 2000) }
+                finally { savingActions.value = false }
+              }
+
+              onMounted(function() {
+                fetchUsers()
+                fetchMenus()
+                fetchActions()
+              })
+
+              return { users, allMenus, allActions, selectedUserId, selectedMenuId, checkedMenus, checkedActions, saving, savingActions, sv, allMenusSelected, selMenuActions, selMenuActionsAllSelected, selectedMenuLabel, toggleAllMenus, selectMenu, toggleAction, toggleSelMenuActions, onUserChange, saveMenus, saveActions }
+            }
+          }
+        }
+      }).mount('#app')
+    })()
+  </script>
+</body>
+</html>

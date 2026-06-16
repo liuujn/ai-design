@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    container_name: ai-design-backend
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "9090:9090"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:oracle:thin:@172.17.11.24:1521:DS6CM
+      - SPRING_DATASOURCE_USERNAME=rak
+      - SPRING_DATASOURCE_PASSWORD=rak
+    networks:
+      - ai-design-net
+
+  frontend:
+    container_name: ai-design-frontend
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - ai-design-net
+
+networks:
+  ai-design-net:
+    driver: bridge

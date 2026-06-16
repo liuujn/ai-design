@@ -56,6 +56,9 @@ public class CartServiceImpl implements CartService {
         if (product == null) {
             throw new BusinessException("E9404", "商品不存在。");
         }
+        if (!"active".equals(product.getStatus())) {
+            throw new BusinessException("E9403", "商品已下架，无法加入购物车。");
+        }
         if (product.getStock() < request.getQuantity()) {
             throw new BusinessException("E9403", "库存不足：" + product.getName() + " 当前库存 " + product.getStock() + "。");
         }

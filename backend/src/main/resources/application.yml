@@ -19,3 +19,8 @@ jwt:
   secret: MySuperSecretKeyForJWTTokenGeneration2024MustBe256BitsLong
   expiry-seconds: 1800
   remember-me-expiry-seconds: 86400
+
+wechat:
+  app-id: wx6916aae979a43d9e
+  app-secret: 2c739e9d107fb0fc5d1cfc25dd9857f8
+  callback-url: http://localhost:9090/api/v1/auth/wechat/callback

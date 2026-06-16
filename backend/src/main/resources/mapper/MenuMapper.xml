@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.app.menu.mapper.MenuMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.app.menu.model.entity.Menu">
+        <id column="id" property="id"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="label" property="label"/>
+        <result column="icon" property="icon"/>
+        <result column="page_title" property="pageTitle"/>
+        <result column="page_src" property="pageSrc"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="is_divider" property="isDivider"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="is_deleted" property="isDeleted"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, parent_id, label, icon, page_title, page_src,
+        sort_order, is_divider, status,
+        created_at, created_by, updated_at, updated_by, is_deleted
+    </sql>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT * FROM (
+            SELECT T.*, ROWNUM RN FROM (
+                SELECT id, label, icon, page_title, page_src, sort_order, is_divider, status, created_at, updated_at
+                FROM sys_menus
+                <where>
+                    is_deleted = 0
+                    <if test="keyword != null and keyword != ''">
+                        AND label LIKE '%' || #{keyword} || '%'
+                    </if>
+                    <if test="status != null and status != ''">AND status = #{status}</if>
+                </where>
+                ORDER BY sort_order ASC, created_at ASC
+            ) T WHERE ROWNUM &lt;= #{offset} + #{size}
+        ) WHERE RN > #{offset}
+    </select>
+
+    <select id="count" resultType="Long">
+        SELECT COUNT(*) FROM sys_menus
+        <where>
+            is_deleted = 0
+            <if test="keyword != null and keyword != ''">
+                AND label LIKE '%' || #{keyword} || '%'
+            </if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="selectAllActiveOrdered" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/>
+        FROM sys_menus
+        WHERE is_deleted = 0 AND status = 'active'
+        ORDER BY sort_order ASC, created_at ASC
+    </select>
+
+    <select id="selectActiveByUserId" resultMap="BaseResultMap">
+        SELECT m.id, m.parent_id, m.label, m.icon, m.page_title, m.page_src,
+               m.sort_order, m.is_divider, m.status,
+               m.created_at, m.created_by, m.updated_at, m.updated_by, m.is_deleted
+        FROM sys_menus m
+        INNER JOIN sys_user_menu um ON um.menu_id = m.id AND um.user_id = #{userId}
+        WHERE m.is_deleted = 0 AND m.status = 'active'
+        ORDER BY m.sort_order ASC, m.created_at ASC
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/>
+        FROM sys_menus WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectUpdatedAtById" resultType="java.time.LocalDateTime">
+        SELECT updated_at FROM sys_menus WHERE id = #{id}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sys_menus (id, parent_id, label, icon, page_title, page_src,
+                               sort_order, is_divider, status,
+                               created_at, created_by, updated_at, updated_by, is_deleted)
+        VALUES (#{id}, #{parentId, jdbcType=VARCHAR}, #{label}, #{icon, jdbcType=VARCHAR},
+                #{pageTitle, jdbcType=VARCHAR}, #{pageSrc, jdbcType=VARCHAR},
+                #{sortOrder, jdbcType=INTEGER}, #{isDivider},
+                #{status}, SYSTIMESTAMP, #{createdBy}, SYSTIMESTAMP, #{createdBy}, 0)
+    </insert>
+
+    <update id="updateByIdAndUpdatedAt">
+        UPDATE sys_menus
+        <set>
+            <if test="parentId != null">parent_id = #{parentId},</if>
+            <if test="label != null">label = #{label},</if>
+            <if test="icon != null">icon = #{icon},</if>
+            <if test="pageTitle != null">page_title = #{pageTitle},</if>
+            <if test="pageSrc != null">page_src = #{pageSrc},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="isDivider != null">is_divider = #{isDivider},</if>
+            <if test="status != null">status = #{status},</if>
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{updatedBy}
+        </set>
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="logicDeleteByIdAndUpdatedAt">
+        UPDATE sys_menus
+        SET is_deleted = 1, updated_at = SYSTIMESTAMP, updated_by = #{updatedBy}
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+    <update id="updateStatusByIdAndUpdatedAt">
+        UPDATE sys_menus
+        SET status = #{status},
+            updated_at = SYSTIMESTAMP,
+            updated_by = #{updatedBy}
+        WHERE id = #{id} AND updated_at = #{updatedAt}
+    </update>
+
+</mapper>

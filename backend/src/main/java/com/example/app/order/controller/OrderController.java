@@ -7,6 +7,7 @@ import com.example.app.user.model.dto.response.PageResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,6 +19,10 @@ public class OrderController {
 
     @GetMapping
     public ResponseEntity<PageResult<OrderListVO>> list(@Valid OrderListQuery query) {
+        String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!"u001".equals(userId)) {
+            query.setCreatedBy(userId);
+        }
         return ResponseEntity.ok(orderService.list(query));
     }
 
@@ -28,21 +33,21 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<OrderCreateVO> create(@Valid @RequestBody OrderCreateRequest request) {
-        String operatorId = "SYSTEM";
+        String operatorId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(orderService.create(request, operatorId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<OrderUpdateVO> update(@PathVariable String id,
                                                  @Valid @RequestBody OrderUpdateRequest request) {
-        String operatorId = "SYSTEM";
+        String operatorId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(orderService.update(id, request, operatorId));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id,
-                                       @Valid @RequestBody OrderDeleteRequest request) {
-        String operatorId = "SYSTEM";
+                                        @Valid @RequestBody OrderDeleteRequest request) {
+        String operatorId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         orderService.delete(id, request, operatorId);
         return ResponseEntity.noContent().build();
     }
@@ -50,7 +55,7 @@ public class OrderController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<OrderStatusVO> updateStatus(@PathVariable String id,
                                                        @Valid @RequestBody OrderStatusRequest request) {
-        String operatorId = "SYSTEM";
+        String operatorId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(orderService.updateStatus(id, request, operatorId));
     }
 }

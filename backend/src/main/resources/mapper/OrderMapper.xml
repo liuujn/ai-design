@@ -49,6 +49,7 @@
                         AND (order_no LIKE '%' || #{keyword} || '%' OR customer_name LIKE '%' || #{keyword} || '%')
                     </if>
                     <if test="status != null and status != ''">AND status = #{status}</if>
+                    <if test="createdBy != null and createdBy != ''">AND created_by = #{createdBy}</if>
                 </where>
                 ORDER BY created_at DESC
             ) T WHERE ROWNUM &lt;= #{offset} + #{size}
@@ -63,6 +64,7 @@
                 AND (order_no LIKE '%' || #{keyword} || '%' OR customer_name LIKE '%' || #{keyword} || '%')
             </if>
             <if test="status != null and status != ''">AND status = #{status}</if>
+            <if test="createdBy != null and createdBy != ''">AND created_by = #{createdBy}</if>
         </where>
     </select>
 

@@ -51,12 +51,12 @@
         </div>
 
         <nav class="flex-1 py-3 overflow-y-auto">
-          <div v-for="(item, idx) in menuItems" :key="idx">
-            <div v-if="item.divider" class="px-4 py-1.5">
+          <div v-for="(item, idx) in groupedMenus" :key="idx">
+            <div v-if="item.isDivider" class="px-4 py-1.5">
               <div v-if="!collapsed" class="text-[10px] uppercase tracking-widest text-gray-500 font-medium">{{ item.label }}</div>
             </div>
-            <div v-else @click="switchMenu(idx)" class="menu-item flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg cursor-pointer select-none text-sm" :class="activeMenu === idx ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'">
-              <div class="w-5 h-5 flex items-center justify-center flex-shrink-0" v-html="item.icon"></div>
+            <div v-else @click="switchMenu(idx)" class="menu-item flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg cursor-pointer select-none text-sm" :class="[activeMenu === idx ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800', !collapsed && item.indent ? 'pl-10' : '']">
+              <div class="w-5 h-5 flex items-center justify-center flex-shrink-0" v-html="item.icon || '<svg class=\'w-4 h-4\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M13 10V3L4 14h7v7l9-11h-7z\'/></svg>'"></div>
               <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
             </div>
           </div>
@@ -111,34 +111,16 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 class="text-sm font-semibold text-gray-800 mb-3">快捷入口</h3>
               <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div @click="switchMenu(2)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50 cursor-pointer transition-all duration-200">
-                  <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg></div>
-                  <div><p class="text-sm font-medium text-gray-700">用户管理</p><p class="text-xs text-gray-400">管理系统用户</p></div>
-                </div>
-                <div @click="switchMenu(3)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-orange-200 hover:bg-orange-50 cursor-pointer transition-all duration-200">
-                  <div class="w-9 h-9 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
-                  <div><p class="text-sm font-medium text-gray-700">地址管理</p><p class="text-xs text-gray-400">管理收货地址</p></div>
-                </div>
-                <div @click="switchMenu(4)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-cyan-200 hover:bg-cyan-50 cursor-pointer transition-all duration-200">
-                  <div class="w-9 h-9 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg></div>
-                  <div><p class="text-sm font-medium text-gray-700">商品分类</p><p class="text-xs text-gray-400">管理商品分类</p></div>
-                </div>
-                <div @click="switchMenu(5)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-purple-200 hover:bg-purple-50 cursor-pointer transition-all duration-200">
-                  <div class="w-9 h-9 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>
-                  <div><p class="text-sm font-medium text-gray-700">商品管理</p><p class="text-xs text-gray-400">管理商品信息</p></div>
-                </div>
-                <div @click="switchMenu(6)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50 cursor-pointer transition-all duration-200">
-                  <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div>
-                  <div><p class="text-sm font-medium text-gray-700">订单管理</p><p class="text-xs text-gray-400">查看管理订单</p></div>
-                </div>
-                <div @click="switchMenu(7)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-cyan-200 hover:bg-cyan-50 cursor-pointer transition-all duration-200">
-                  <div class="w-9 h-9 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg></div>
-                  <div><p class="text-sm font-medium text-gray-700">购物车</p><p class="text-xs text-gray-400">管理购物车并结算</p></div>
-                </div>
+                <template v-for="(item, idx) in menuItems" :key="'shortcut-'+idx">
+                  <div v-if="item.pageSrc && !item.isDivider" @click="switchMenu(idx)" class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50 cursor-pointer transition-all duration-200">
+                    <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center" v-html="item.icon || '<svg class=\'w-5 h-5\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M13 10V3L4 14h7v7l9-11h-7z\'/></svg>'"></div>
+                    <div><p class="text-sm font-medium text-gray-700" v-text="item.label"></p><p class="text-xs text-gray-400" v-text="item.pageTitle || item.label"></p></div>
+                  </div>
+                </template>
               </div>
             </div>
           </div>
-          <iframe v-else :src="currentItem?.pageSrc ? baseDir + currentItem.pageSrc : ''" class="w-full h-full border-none"></iframe>
+          <iframe v-else :src="iframeSrc" class="w-full h-full border-none"></iframe>
         </main>
       </div>
 
@@ -149,20 +131,38 @@
   <script>
     ;(function boot(){
       if (!_vueOk || !_axiosOk) { _queue.push(boot); return }
-      if (!localStorage.getItem('auth_token')) { window.location.href = '登录.html'; return }
+      if (!localStorage.getItem('auth_token')) { window.location.href = 'login.html'; return }
 
       const { ref, reactive, computed, onMounted, onUnmounted, createApp } = Vue
 
-      const menuItems = [
-        { label: '首页', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>', pageTitle: '系统首页' },
-        { divider: true, label: '业务管理' },
-        { label: '用户管理', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg>', pageTitle: '用户管理', pageSrc: '用户.html' },
-        { label: '地址管理', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>', pageTitle: '地址管理', pageSrc: '地址.html' },
-        { label: '商品分类', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>', pageTitle: '商品分类', pageSrc: '商品分类.html' },
-        { label: '商品管理', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>', pageTitle: '商品管理', pageSrc: '商品.html' },
-        { label: '订单管理', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>', pageTitle: '订单管理', pageSrc: '订单.html' },
-        { label: '购物车', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>', pageTitle: '购物车管理', pageSrc: '购物车.html' }
-      ]
+      const menuItems = ref([])
+      const menuLoading = ref(true)
+      const activeMenu = ref(0)
+      const groupedMenus = computed(function() {
+        var indent = false
+        return menuItems.value.map(function(item) {
+          if (item.isDivider) { indent = true; return item }
+          return Object.assign({}, item, { indent: indent })
+        })
+      })
+
+      async function fetchMenus() {
+        try {
+          var api2 = axios.create({ baseURL: 'http://localhost:9090/api/v1', timeout: 10000, headers: { 'Content-Type': 'application/json' } })
+          api2.interceptors.request.use(cfg => { var t = localStorage.getItem('auth_token'); if (t) cfg.headers.Authorization = 'Bearer ' + t; return cfg })
+          api2.interceptors.response.use(r => r, e => { if (e.response && e.response.status === 401) { localStorage.removeItem('auth_token'); window.location.href = 'login.html' }; return Promise.reject(e) })
+          var oldId = menuItems.value[activeMenu.value]?.id
+          var res = await api2.get('/menus/sidebar')
+          menuItems.value = res.data ?? []
+          if (oldId && activeMenu.value > 0) {
+            var newIdx = menuItems.value.findIndex(m => m.id === oldId)
+            if (newIdx >= 0) activeMenu.value = newIdx
+          }
+        } catch (e) { menuItems.value = [] }
+        finally { menuLoading.value = false }
+      }
+
+      function findMenuIdx(label) { return menuItems.value.findIndex(item => item.label === label) }
 
       const baseDir = (function(){
         var p = window.location.pathname
@@ -175,7 +175,6 @@
             template: document.getElementById('tpl').innerHTML,
             setup() {
               const collapsed = ref(false)
-              const activeMenu = ref(0)
               const userName = ref(localStorage.getItem('user_name') || '用户')
               const now = ref('')
               const sv = ref('')
@@ -187,7 +186,13 @@
                 return n && n.length > 0 ? n.charAt(0) : '?'
               })
 
-              const currentItem = computed(() => menuItems[activeMenu.value])
+              const currentItem = computed(() => menuItems.value[activeMenu.value])
+
+              const iframeSrc = computed(() => {
+                var item = currentItem.value
+                if (!item?.pageSrc) return ''
+                return baseDir + item.pageSrc + '?menuId=' + item.id
+              })
 
               const stats = reactive({ userCount: '-', orderCount: '-', activeCount: '-' })
 
@@ -201,7 +206,7 @@
                 localStorage.removeItem('auth_token')
                 localStorage.removeItem('user_name')
                 localStorage.removeItem('user_id')
-                window.location.href = '登录.html'
+                window.location.href = 'login.html'
               }
 
               function switchMenu(idx) {
@@ -227,11 +232,19 @@
                 updateClock()
                 timer = setInterval(updateClock, 1000)
                 fetchStats()
+                fetchMenus()
+                window.addEventListener('message', function(e) {
+                  if (e.data && e.data.type === 'refreshMenus') fetchMenus()
+                  if (e.data && e.data.type === 'switchMenu') {
+                    var idx = menuItems.value.findIndex(function(m) { return m.label === e.data.label })
+                    if (idx >= 0) activeMenu.value = idx
+                  }
+                })
               })
 
               onUnmounted(() => { if (timer) clearInterval(timer) })
 
-              return { collapsed, activeMenu, userName, now, sv, userInitial, currentItem, stats, menuItems, baseDir, doLogout, switchMenu }
+              return { collapsed, activeMenu, userName, now, sv, userInitial, currentItem, iframeSrc, stats, menuItems, groupedMenus, menuLoading, baseDir, doLogout, switchMenu, findMenuIdx }
             }
           }
         }

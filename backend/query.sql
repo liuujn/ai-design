@@ -1,0 +1,5 @@
+SET LINESIZE 200
+SET PAGESIZE 100
+COLUMN open_id FORMAT A30
+SELECT open_id FROM rak.users WHERE open_id LIKE 'mock_wx_%';
+EXIT;
